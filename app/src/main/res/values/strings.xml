@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CorrectDemo</string>
+    <string name="icon">icon</string>
+    <string name="input_text">请输入要添加的文字，点击屏幕放置</string>
+</resources>
