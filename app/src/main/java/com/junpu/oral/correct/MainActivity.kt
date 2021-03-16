@@ -1,14 +1,16 @@
 package com.junpu.oral.correct
 
+import android.Manifest
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.junpu.gopermissions.PermissionsActivity
 import com.junpu.oral.correct.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityMainBinding
 import com.junpu.oral.correct.utils.doOnSeekBarChange
 import com.junpu.utils.setVisibility
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : PermissionsActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -57,10 +59,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        checkPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            if (it) {
+                initBitmap()
+            } else {
+                finish()
+            }
+        }
+
+    }
+
+    private fun initBitmap() {
         binding.correctView.post {
 //            val bitmap = BitmapFactory.decodeResource(resources, R.raw.math_h)
-//            val bitmap = BitmapFactory.decodeResource(resources, R.raw.eng_h)
-            val bitmap = BitmapFactory.decodeResource(resources, R.raw.math_l)
+            val bitmap = BitmapFactory.decodeResource(resources, R.raw.math_v)
+//            val bitmap = BitmapFactory.decodeFile("/sdcard/Download/math_v.jpg")
             binding.correctView.setBitmap(bitmap)
         }
     }

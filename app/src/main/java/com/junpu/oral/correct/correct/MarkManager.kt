@@ -920,15 +920,15 @@ class MarkManager(private var context: Context) {
         private const val SYMBOL_TYPE_WRONG = "wrong"
 
         // Mark的默认大小
-        private const val TEXT_SIZE = 75 // 默认文字大小
-        private const val SYMBOL_RIGHT_WIDTH = 240 // 默认对勾宽度
-        private const val SYMBOL_RIGHT_HEIGHT = 160 // 默认对勾高度
-        private const val SYMBOL_WRONG_WIDTH = 110 // 默认错叉宽度
-        private const val SYMBOL_WRONG_HEIGHT = 100 // 默认错叉高度
-        private const val PATH_LINE_WIDTH = 7.5f // 默认path线宽
-        private const val SELECTED_LINE_WIDTH = 3.5f // 默认selected线宽
-        private const val BUTTON_DIAMETER = 80 // 默认删除图标尺寸
-        private const val TOUCH_OFFSET = 20 // 触摸误差
+        private const val TEXT_SIZE = 30 // 默认文字大小
+        private const val SYMBOL_RIGHT_WIDTH = 96 // 默认对勾宽度
+        private const val SYMBOL_RIGHT_HEIGHT = 64 // 默认对勾高度
+        private const val SYMBOL_WRONG_WIDTH = 44 // 默认错叉宽度
+        private const val SYMBOL_WRONG_HEIGHT = 40 // 默认错叉高度
+        private const val PATH_LINE_WIDTH = 3f // 默认path线宽
+        private const val SELECTED_LINE_WIDTH = 3f // 默认selected线宽
+        private const val BUTTON_DIAMETER = 30 // 默认删除、拖动按钮直径
+        private const val TOUCH_OFFSET = 10 // 触摸误差
     }
 
 }

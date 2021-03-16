@@ -8,6 +8,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import androidx.core.graphics.scaleMatrix
 import com.junpu.log.L
 import com.junpu.oral.correct.utils.resizeImage
 import com.junpu.utils.isNotNullOrBlank
@@ -73,19 +74,18 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
      * 初始化Bitmap配置
      */
     private fun initBitmapConfig() {
-        val bw = bitmap?.width ?: return
-        val bh = bitmap?.height ?: return
-        val size = resizeImage(bw, bh, width, height)
-        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${bw}/${bh}, render: $size")
-        val scale = min(width / bw.toFloat(), height / bh.toFloat())
-        val tx = (width - size.width) / 2f
-        val ty = (height - size.height) / 2f
+        val w = bitmap?.width ?: return
+        val h = bitmap?.height ?: return
+        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${w}/${h}")
+        val scale = min(width / w.toFloat(), height / h.toFloat())
+        val tx = (width - w) / 2f
+        val ty = (height - h) / 2f
         curMatrix.run {
             reset()
             postScale(scale, scale)
             postTranslate(tx, ty)
         }
-        markManager.init(bw, bh, scale, tx, ty)
+        markManager.init(w, h, scale, tx, ty)
     }
 
     override fun onDetachedFromWindow() {
@@ -228,9 +228,27 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
      * 设置背景图片
      */
     fun setBitmap(bitmap: Bitmap) {
-        this.bitmap = bitmap
+        val w = bitmap.width
+        val h = bitmap.height
+        val size = resizeImage(w, h)
+        val scale = min(size.width / w.toFloat(), size.height / h.toFloat())
+        val matrix = scaleMatrix(scale, scale)
+        this.bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, matrix, false)
+        if (this.bitmap != bitmap) bitmap.recycle()
         initBitmapConfig()
         invalidate()
+    }
+
+    /**
+     * 向左旋转
+     */
+    fun rotate(clockwise: Boolean = true) {
+//        val bitmap = bitmap ?: return
+//        val degree = if (clockwise) 90f else -90f
+//        val x = markManager.translateX + bitmap.width * markManager.scale / 2
+//        val y = markManager.translateY + bitmap.height * markManager.scale / 2
+//        curMatrix.postRotate(degree, x, y)
+//        invalidate()
     }
 
     /**
@@ -276,18 +294,6 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
      */
     fun redo() {
         markManager.redo()
-        invalidate()
-    }
-
-    /**
-     * 向左旋转
-     */
-    fun rotate(clockwise: Boolean = true) {
-        val bitmap = bitmap ?: return
-        val degree = if (clockwise) 90f else -90f
-        val x = markManager.translateX + bitmap.width * markManager.scale / 2
-        val y = markManager.translateY + bitmap.height * markManager.scale / 2
-        curMatrix.postRotate(degree, x, y)
         invalidate()
     }
 
