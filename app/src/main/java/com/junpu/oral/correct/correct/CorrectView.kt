@@ -70,24 +70,6 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         initBitmapConfig()
     }
 
-    /**
-     * 初始化Bitmap配置
-     */
-    private fun initBitmapConfig() {
-        val w = bitmap?.width ?: return
-        val h = bitmap?.height ?: return
-        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${w}/${h}")
-        val scale = min(width / w.toFloat(), height / h.toFloat())
-        val tx = (width - w) / 2f
-        val ty = (height - h) / 2f
-        curMatrix.run {
-            reset()
-            postScale(scale, scale)
-            postTranslate(tx, ty)
-        }
-        markManager.init(w, h, scale, tx, ty)
-    }
-
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         markManager.release()
@@ -222,6 +204,26 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
 
     override fun onScaleEnd(detector: ScaleGestureDetector?) {
         touchMode = TouchMode.NONE
+    }
+
+    /**
+     * 初始化Bitmap配置
+     */
+    private fun initBitmapConfig() {
+        val w = bitmap?.width ?: return
+        val h = bitmap?.height ?: return
+        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${w}/${h}")
+        val scaleX = width / w.toFloat()
+        val scaleY = height / h.toFloat()
+        val scale = min(scaleX, scaleY)
+        val tx = if (scaleX > scaleY) (width - w) / 2f else 0f
+        val ty = if (scaleX < scaleY) (height - h) / 2f else 0f
+        curMatrix.run {
+            reset()
+            postScale(scale, scale)
+            postTranslate(tx, ty)
+        }
+        markManager.init(w, h, scale, tx, ty)
     }
 
     /**
