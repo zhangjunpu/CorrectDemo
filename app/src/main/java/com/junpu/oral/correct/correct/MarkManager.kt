@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.*
 import android.text.TextPaint
 import androidx.core.content.ContextCompat
-import com.junpu.log.L
 import com.junpu.oral.correct.R
 import com.junpu.oral.correct.module.CorrectMark
 import com.junpu.oral.correct.module.MarkRecord
@@ -25,24 +24,18 @@ class MarkManager(private var context: Context) {
     private val selectedMark by lazy { SelectedMark() }
     private val recordManager by lazy { OperationRecords() }
 
-    // 图片基本数据
-    private var bitmapWidth: Int = 0
-    private var bitmapHeight: Int = 0
-    var translateX = 0f // 当前移动X轴距离
-    var translateY = 0f // 当前移动Y轴距离
-    var scale = 1f // 当前缩放系数
-        set(value) {
-            field = min(IMAGE_SCALE_MAX, max(IMAGE_SCALE_MIN, value))
-        }
+    // 画布宽高
+    private var width = 0
+    private var height = 0
 
     // Mark缩放系数
     private var markScale = 1f
         set(value) {
             field = min(MARK_SCALE_MAX, max(MARK_SCALE_MIN, value))
         }
+    private var rotation = 0 // 旋转方向，0,1,2,3 -> 0,90,180,270
 
     // mark数据
-    private var markId = 0 // markId 自增
     private val markList = arrayListOf<CorrectMark>() // mark数据队列
     private var curIndex = -1 // 当前选中
     private val curMark: CorrectMark? // 当前选中Mark
@@ -51,27 +44,54 @@ class MarkManager(private var context: Context) {
     // 临时内存地址指针
     private var pointF = PointF() // 存放坐标转换的临时空间
     private var rectF = RectF() // 存放边界的临时空间
+    private var arr = FloatArray(4) // 坐标转换临时空间
     private var lockedMark: CorrectMark? = null // 处理中的mark指针
     private var lockedPoints: MutableList<PointF>? = null // 操作中的PathPoint
+
+    // mark Canvas
+    private val canvas by lazy { Canvas() }
 
     /**
      * 初始化赋值
      */
-    fun init(bitmapWidth: Int, bitmapHeight: Int, scale: Float, tx: Float, ty: Float) {
-        this.bitmapWidth = bitmapWidth
-        this.bitmapHeight = bitmapHeight
-        this.scale = scale
-        this.translateX = tx
-        this.translateY = ty
+    fun initBitmap(bitmap: Bitmap) {
+        canvas.setBitmap(bitmap)
+        width = canvas.width
+        height = canvas.height
     }
 
     /**
-     * 生成新标记
+     * 生成新标记 - 勾
      */
-    fun generateRight(x: Float, y: Float) = addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_RIGHT))
-    fun generateWrong(x: Float, y: Float) = addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_WRONG))
-    fun generateText(x: Float, y: Float, text: String) = addMark(textMark.newMark(x, y, text))
-    fun generatePath(x: Float, y: Float) = addMark(pathMark.newMark(x, y))
+    fun generateRight(x: Float, y: Float) {
+        if (!checkOutOfBounds(x, y)) return
+        addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_RIGHT))
+    }
+
+    /**
+     * 生成新标记 - 叉
+     */
+    fun generateWrong(x: Float, y: Float) {
+        if (!checkOutOfBounds(x, y)) return
+        addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_WRONG))
+    }
+
+    /**
+     * 生成新标记 - 文字
+     */
+    fun generateText(x: Float, y: Float, text: String) {
+        if (!checkOutOfBounds(x, y)) return
+        addMark(textMark.newMark(x, y, text))
+    }
+
+    /**
+     * 生成新标记 - path
+     */
+    fun generatePath(x: Float, y: Float) {
+        if (!checkOutOfBounds(x, y)) return
+        addMark(pathMark.newMark(x, y))
+    }
+
     private fun addMark(mark: CorrectMark?) {
         mark ?: return
         markList.add(mark)
@@ -82,7 +102,8 @@ class MarkManager(private var context: Context) {
     /**
      * 画mark
      */
-    fun draw(canvas: Canvas) {
+    fun draw() {
+        canvas.drawColor(0, PorterDuff.Mode.CLEAR)
         markList.forEachIndexed { index, it ->
             when (it.type) {
                 MARK_TYPE_SYMBOL -> symbolMark.draw(canvas, it)
@@ -135,8 +156,7 @@ class MarkManager(private var context: Context) {
      * [continuousScale] 持续缩放，如果为false，则添加 [RecordType.SCALE] 缩放记录
      */
     fun setScalePercent(percent: Float, continuousScale: Boolean) {
-        val scale = MARK_SCALE_MIN + percent * (MARK_SCALE_MAX - MARK_SCALE_MIN)
-        markScale = scale
+        markScale = MARK_SCALE_MIN + percent * (MARK_SCALE_MAX - MARK_SCALE_MIN)
         val mark = lockedMark ?: curMark ?: return
         // 添加操作记录
         if (!continuousScale) recordManager.addScaleRecord(mark)
@@ -152,44 +172,46 @@ class MarkManager(private var context: Context) {
         // 添加操作记录
         if (!continuousDrag) recordManager.addMoveRecord(mark)
         if (mark.isTypePath) {
-            getMarkBoundsInView(mark, rectF)
+            getMarkBounds(mark, rectF)
             val x = rectF.left + tx
             val y = rectF.top + ty
-            if (checkOutOfBoundsInView(x, y, rectF.width(), rectF.height())) return
+            if (!checkOutOfBounds(x, y, rectF.width(), rectF.height())) return
             mark.segments?.forEach { it ->
-                it.points?.forEach { it.offset(tx / scale, ty / scale) }
+                it.points?.forEach { it.offset(tx, ty) }
             }
         } else {
-            toViewPoint(mark.x, mark.y, pointF)
-            val x = pointF.x + tx
-            val y = pointF.y + ty
+            val x = mark.x + tx
+            val y = mark.y + ty
             // 边界检测
-            getMarkBoundsInView(mark, rectF)
-            if (checkOutOfBoundsInView(x, y, rectF.width(), rectF.height())) return
-            toMarkPoint(x, y, pointF)
-            mark.x = pointF.x
-            mark.y = pointF.y
+            getMarkBounds(mark, rectF)
+            val w = rectF.width()
+            val h = rectF.height()
+            val r = adjustRotation(rotation - mark.rotation)
+            val rx = if (r == 1 || r == 2) x - w else x
+            val ry = if (r == 2 || r == 3) y - h else y
+            if (!checkOutOfBounds(rx, ry, rectF.width(), rectF.height())) return
+            mark.x = x
+            mark.y = y
         }
     }
 
     /**
      * 添加路径
      */
-    fun addPathPoint(x: Float, y: Float, tx: Float, ty: Float, isFirst: Boolean) {
+    fun addPathPoint(x: Float, y: Float, tx: Float, ty: Float, continuousDrag: Boolean) {
         val mark = lockedMark ?: return
         if (mark.isTypePath) {
             // 边界范围检测
             var px = x
             var py = y
-            getBitmapBoundsInView(rectF)
+            getBitmapBounds(rectF)
             if (!rectF.contains(px, py)) {
                 if (px < rectF.left) px = rectF.left else if (px > rectF.right) px = rectF.right
                 if (py < rectF.top) py = rectF.top else if (py > rectF.bottom) py = rectF.bottom
             }
-            toMarkPoint(px, py, pointF)
-            lockedPoints?.add(PointF(pointF.x, pointF.y))
+            lockedPoints?.add(PointF(px, py))
         } else {
-            translateMark(tx, ty, isFirst)
+            translateMark(tx, ty, continuousDrag)
         }
     }
 
@@ -203,11 +225,11 @@ class MarkManager(private var context: Context) {
      */
     fun checkTouchArea(x: Float, y: Float): TouchArea {
         val mark = curMark ?: return TouchArea.NONE
-        getMarkBoundsInView(mark, rectF)
+        getMarkBounds(mark, rectF)
         val l = rectF.left
         val t = rectF.top
         val r = rectF.right
-        val offset = TOUCH_OFFSET * scale // 触摸误差范围
+        val offset = TOUCH_OFFSET.toFloat() // 触摸误差范围
 
         // 判断x, y是否触摸到了指定的rect区域内
         fun isTouched(rect: RectF): Boolean {
@@ -219,12 +241,12 @@ class MarkManager(private var context: Context) {
         val isTouchedCurMark = isTouched(rectF)
 
         // 判断是否点到了删除按钮
-        selectedMark.getButtonBoundsInView(r, t, rectF)
+        selectedMark.getButtonBounds(r, t, rectF)
         if (isTouched(rectF)) return TouchArea.DELETE
 
         // 判断是否触摸到了拖动按钮（只有path模式拥有拖动按钮）
         if (mark.isTypePath) {
-            selectedMark.getButtonBoundsInView(l, t, rectF)
+            selectedMark.getButtonBounds(l, t, rectF)
             if (isTouched(rectF)) return TouchArea.DRAG
         }
 
@@ -234,7 +256,7 @@ class MarkManager(private var context: Context) {
         // 判断是否点击到了某个按钮
         for (i in markList.lastIndex downTo 0) {
             if (mark == markList[i]) continue
-            getMarkBoundsInView(markList[i], rectF)
+            getMarkBounds(markList[i], rectF)
             if (isTouched(rectF)) {
                 curIndex = i
                 return TouchArea.MARK
@@ -244,51 +266,29 @@ class MarkManager(private var context: Context) {
     }
 
     /**
-     * 边界检测，在View范围内
+     * 边界检测，是否在画布范围内
+     * @return true 在范围内, false 超出范围
      */
-    private fun checkOutOfBoundsInView(x: Float, y: Float, w: Float = 0f, h: Float = 0f): Boolean {
-        getBitmapBoundsInView(rectF)
-        L.vv(rectF)
-        return !rectF.contains(x, y, x + w, y + h)
+    private fun checkOutOfBounds(x: Float, y: Float, w: Float = 0f, h: Float = 0f): Boolean {
+        getBitmapBounds(rectF)
+        return rectF.contains(x, y, x + w, y + h)
     }
 
     /**
      * 获取位图在View上的边界
      */
-    private fun getBitmapBoundsInView(rect: RectF) {
-        val l = translateX
-        val t = translateY
-        val r = translateX + bitmapWidth * scale
-        val b = translateY + bitmapHeight * scale
-        rect.set(l, t, r, b)
-    }
-
-    /**
-     * 坐标转换，从mark坐标到view坐标
-     */
-    private fun toViewPoint(x: Float, y: Float, point: PointF) {
-        val ax = x * scale + translateX
-        val ay = y * scale + translateY
-        point.set(ax, ay)
-    }
-
-    /**
-     * 坐标转换，从view坐标到mark坐标
-     */
-    private fun toMarkPoint(x: Float, y: Float, point: PointF) {
-        val rax = (x - translateX) / scale
-        val ray = (y - translateY) / scale
-        point.set(rax, ray)
+    private fun getBitmapBounds(rect: RectF) {
+        rect.set(0f, 0f, width.toFloat(), height.toFloat())
     }
 
     /**
      * 获取mark在View上的边界
      */
-    private fun getMarkBoundsInView(mark: CorrectMark, rect: RectF) {
+    private fun getMarkBounds(mark: CorrectMark, rect: RectF) {
         when (mark.type) {
-            MARK_TYPE_SYMBOL -> symbolMark.getBoundsInView(mark, rect)
-            MARK_TYPE_TEXT -> textMark.getBoundsInView(mark, rect)
-            MARK_TYPE_DRAWING -> pathMark.getBoundsInView(mark, rect)
+            MARK_TYPE_SYMBOL -> symbolMark.getBounds(mark, rect)
+            MARK_TYPE_TEXT -> textMark.getBounds(mark, rect)
+            MARK_TYPE_DRAWING -> pathMark.getBounds(mark, rect)
         }
     }
 
@@ -320,18 +320,82 @@ class MarkManager(private var context: Context) {
      * 释放必要资源
      */
     fun release() {
-        selectedMark.release()
         markList.clear()
+        recordManager.clear()
     }
 
     /**
      * 旋转
      */
-    fun rotate(degree: Float) {
-        val x = translateX + bitmapWidth * scale / 2
-        val y = translateY + bitmapHeight * scale / 2
-        // TODO: 2021/3/12
+    fun rotate(deg: Float) {
+        val oldRotation = rotation
+        rotation = adjustRotation(deg.toInt() / 90)
+        val r = adjustRotation(rotation - oldRotation)
+        rotationMarkList(r)
     }
+
+    /**
+     * 旋转数据
+     */
+    private fun rotationMarkList(rotation: Int) {
+        markList.forEach {
+            if (it.isTypePath) {
+                it.segments?.forEach { seg ->
+                    seg.points?.forEach { point ->
+                        pointRotation(point.x, point.y, arr, rotation)
+                        point.set(arr[0], arr[1])
+                    }
+                }
+            } else {
+                pointRotation(it.x, it.y, arr, rotation)
+                it.x = arr[0]
+                it.y = arr[1]
+            }
+        }
+    }
+
+    /**
+     * 根据rotation旋转方向，获得x, y旋转后的在屏幕上对应的点
+     */
+    private fun pointRotation(x: Float, y: Float, arr: FloatArray, rotation: Int) {
+        arr[0] = x
+        arr[1] = y
+        if (rotation == 0) return
+
+        val swap = rotation and 1 == 1
+        val w = if (swap) height else width
+        val h = if (swap) width else height
+        arr[2] = w - x
+        arr[3] = h - y
+
+        // 数组正向位移操作
+        val move = {
+            val temp = arr[arr.lastIndex]
+            for (i in arr.lastIndex downTo 1) {
+                arr[i] = arr[i - 1]
+            }
+            arr[0] = temp
+        }
+
+        var i = 0
+        while (i < rotation) {
+            move()
+            i++
+        }
+    }
+
+    /**
+     * 获取mark相对于当前方向应该旋转的角度
+     */
+    private fun getMarkDegree(mark: CorrectMark, rotation: Int): Float {
+        val r = rotation - mark.rotation
+        return (r * 90f) % 360
+    }
+
+    /**
+     * rotation矫正
+     */
+    private fun adjustRotation(rotation: Int) = rotation and 3
 
     /**
      * 是否为path模式
@@ -358,43 +422,28 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的符号
          */
-        fun newMark(x: Float, y: Float, symbol: String?): CorrectMark? {
-            if (checkOutOfBoundsInView(x, y)) return null
-            toMarkPoint(x, y, pointF)
-            val rx = pointF.x
-            val ry = pointF.y
-            return CorrectMark(markId++, MARK_TYPE_SYMBOL, rx, ry, markScale, symbol)
+        fun newMark(x: Float, y: Float, symbol: String?): CorrectMark {
+            return CorrectMark(MARK_TYPE_SYMBOL, x, y, markScale, symbol, rotation = rotation)
         }
 
         /**
          * 画勾、叉
          */
         fun draw(canvas: Canvas, mark: CorrectMark) {
-            getSizeInView(mark, pointF)
+            val img = (if (mark.symbol == SYMBOL_TYPE_RIGHT) symbolRight else symbolWrong) ?: return
+            getBounds(mark, rectF)
+            getSize(mark, pointF)
             val w = pointF.x
             val h = pointF.y
-            toViewPoint(mark.x, mark.y, pointF)
-            val l = pointF.x
-            val t = pointF.y
-            val r = l + w
-            val b = t + h
-            val symbol = if (mark.symbol == SYMBOL_TYPE_RIGHT) symbolRight else symbolWrong
-            symbol?.setBounds(l.toInt(), t.toInt(), r.toInt(), b.toInt())
-            symbol?.draw(canvas)
-        }
-
-        /**
-         * 获取mark在View上的边界
-         */
-        fun getBoundsInView(mark: CorrectMark, rect: RectF) {
-            rect.setEmpty()
-            getSizeInView(mark, pointF)
-            val w = pointF.x
-            val h = pointF.y
-            toViewPoint(mark.x, mark.y, pointF)
-            val x = pointF.x
-            val y = pointF.y
-            rect.set(x, y, x + w, y + h)
+            val l = mark.x
+            val t = mark.y
+            canvas.save()
+            canvas.rotate(getMarkDegree(mark, rotation), l, t)
+            img.run {
+                setBounds(l.toInt(), t.toInt(), (l + w).toInt(), (t + h).toInt())
+                draw(canvas)
+            }
+            canvas.restore()
         }
 
         /**
@@ -402,22 +451,16 @@ class MarkManager(private var context: Context) {
          */
         fun getBounds(mark: CorrectMark, rect: RectF) {
             rect.setEmpty()
+            val r = adjustRotation(rotation - mark.rotation)
+            val swap = r and 1 == 1
             getSize(mark, pointF)
-            val w = pointF.x
-            val h = pointF.y
+            val w = if (swap) pointF.y else pointF.x
+            val h = if (swap) pointF.x else pointF.y
             val x = mark.x
             val y = mark.y
-            rect.set(x, y, x + w, y + h)
-        }
-
-        /**
-         * 获取符号在View上的尺寸
-         */
-        private fun getSizeInView(mark: CorrectMark, rect: PointF) {
-            getSize(mark, rect)
-            val w = rect.x
-            val h = rect.y
-            rect.set(w * scale, h * scale)
+            val l = if (r == 1 || r == 2) x - w else x
+            val t = if (r == 2 || r == 3) y - h else y
+            rect.set(l, t, l + w, t + h)
         }
 
         /**
@@ -457,12 +500,8 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的mark
          */
-        fun newMark(x: Float, y: Float, text: String): CorrectMark? {
-            if (checkOutOfBoundsInView(x, y)) return null
-            toMarkPoint(x, y, pointF)
-            val rx = pointF.x
-            val ry = pointF.y
-            return CorrectMark(markId++, MARK_TYPE_TEXT, rx, ry, markScale, text = text)
+        fun newMark(x: Float, y: Float, text: String): CorrectMark {
+            return CorrectMark(MARK_TYPE_TEXT, x, y, markScale, text = text, rotation = rotation)
         }
 
         /**
@@ -470,32 +509,20 @@ class MarkManager(private var context: Context) {
          */
         fun draw(canvas: Canvas, mark: CorrectMark) {
             if (mark.text.isNullOrBlank()) return
-            toViewPoint(mark.x, mark.y, pointF)
-            val x = pointF.x
-            val y = pointF.y
+            val x = mark.x
+            val y = mark.y
             val texts = mark.getTextForEachLine()
-            val textSize = TEXT_SIZE * mark.scale * scale
+            val textSize = TEXT_SIZE * mark.scale
             textPaint.textSize = textSize
             val metrics = textPaint.fontMetrics // baseline相关参数
-            texts.forEachIndexed { index, s ->
+            canvas.save()
+            canvas.rotate(getMarkDegree(mark, rotation), x, y)
+            texts.forEachIndexed { index, text ->
                 // 由于drawText是从baseline坐标开始画的，所以需要向下偏移一行baseline到文字顶部的高度，+2为微调
                 val offsetY = (index + 1) * textSize - metrics.descent + 2
-                canvas.drawText(s, x, y + offsetY, textPaint)
+                canvas.drawText(text, x, y + offsetY, textPaint)
             }
-        }
-
-        /**
-         * 获取mark在View上的边界
-         */
-        fun getBoundsInView(mark: CorrectMark, rect: RectF) {
-            rect.setEmpty()
-            getSizeInView(mark, pointF)
-            val w = pointF.x
-            val h = pointF.y
-            toViewPoint(mark.x, mark.y, pointF)
-            val x = pointF.x
-            val y = pointF.y
-            rect.set(x, y, x + w, y + h)
+            canvas.restore()
         }
 
         /**
@@ -503,22 +530,16 @@ class MarkManager(private var context: Context) {
          */
         fun getBounds(mark: CorrectMark, rect: RectF) {
             rect.setEmpty()
+            val r = adjustRotation(rotation - mark.rotation)
+            val swap = r and 3 == 1
             getSize(mark, pointF)
-            val w = pointF.x
-            val h = pointF.y
+            val w = if (swap) pointF.y else pointF.x
+            val h = if (swap) pointF.x else pointF.y
             val x = mark.x
             val y = mark.y
-            rect.set(x, y, x + w, y + h)
-        }
-
-        /**
-         * 获取文字在View上的尺寸
-         */
-        private fun getSizeInView(mark: CorrectMark, rect: PointF) {
-            getSize(mark, rect)
-            val w = rect.x
-            val h = rect.y
-            rect.set(w * scale, h * scale)
+            val l = if (r == 1 || r == 2) x - w else x
+            val t = if (r == 2 || r == 3) y - h else y
+            rect.set(l, t, l + w, t + h)
         }
 
         /**
@@ -563,13 +584,9 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的mark
          */
-        fun newMark(x: Float, y: Float): CorrectMark? {
-            if (checkOutOfBoundsInView(x, y)) return null
-            toMarkPoint(x, y, pointF)
-            val rx = pointF.x
-            val ry = pointF.y
+        fun newMark(x: Float, y: Float): CorrectMark {
             val segments = arrayListOf(newPathPoint)
-            return CorrectMark(markId++, MARK_TYPE_DRAWING, rx, ry, markScale, segments = segments)
+            return CorrectMark(MARK_TYPE_DRAWING, x, y, markScale, segments = segments)
         }
 
         /**
@@ -583,28 +600,13 @@ class MarkManager(private var context: Context) {
                 path.run {
                     reset()
                     it.points?.forEachIndexed { index, point ->
-                        toViewPoint(point.x, point.y, pointF)
-                        val x = pointF.x
-                        val y = pointF.y
+                        val x = point.x
+                        val y = point.y
                         if (index == 0) moveTo(x, y) else lineTo(x, y)
                     }
                 }
-                canvas.drawPath(path, pathPaint.apply { strokeWidth = it.lineWidth * scale })
+                canvas.drawPath(path, pathPaint.apply { strokeWidth = it.lineWidth })
             }
-        }
-
-        /**
-         * 获取mark在View上的边界
-         */
-        fun getBoundsInView(mark: CorrectMark, rect: RectF) {
-            getBounds(mark, rect)
-            toViewPoint(rect.left, rect.top, pointF)
-            val l = pointF.x
-            val t = pointF.y
-            toViewPoint(rect.right, rect.bottom, pointF)
-            val r = pointF.x
-            val b = pointF.y
-            rect.set(l, t, r, b)
         }
 
         /**
@@ -655,12 +657,12 @@ class MarkManager(private var context: Context) {
 
         // 删除icon
         private val delIcon by lazy {
-            BitmapFactory.decodeResource(context.resources, R.mipmap.ic_mark_del)
+            ContextCompat.getDrawable(context, R.drawable.ic_mark_del)
         }
 
         // 拖拽
         private val dragIcon by lazy {
-            BitmapFactory.decodeResource(context.resources, R.mipmap.ic_mark_drag)
+            ContextCompat.getDrawable(context, R.drawable.ic_mark_drag)
         }
 
         // bounds Paint
@@ -676,7 +678,7 @@ class MarkManager(private var context: Context) {
          * 画mark的边框
          */
         fun draw(canvas: Canvas, mark: CorrectMark) {
-            getMarkBoundsInView(mark, rectF)
+            getMarkBounds(mark, rectF)
             if (!rectF.isEmpty) {
                 // 画框
                 canvas.drawRect(rectF, boundsPaint)
@@ -685,33 +687,35 @@ class MarkManager(private var context: Context) {
                 val r = rectF.right
 
                 // 画delete按钮
-                getButtonBoundsInView(r, t, rectF)
-                val srcDel = Rect(0, 0, delIcon.width, delIcon.height)
-                canvas.drawBitmap(delIcon, srcDel, rectF, null)
+                getButtonBounds(r, t, rectF)
+                delIcon?.setBounds(
+                    rectF.left.toInt(),
+                    rectF.top.toInt(),
+                    rectF.right.toInt(),
+                    rectF.bottom.toInt()
+                )
+                delIcon?.draw(canvas)
 
+                // 画drag按钮
                 if (mark.isTypePath) {
-                    // 画drag按钮
-                    getButtonBoundsInView(l, t, rectF)
-                    val srcDrag = Rect(0, 0, dragIcon.width, dragIcon.height)
-                    canvas.drawBitmap(dragIcon, srcDrag, rectF, null)
+                    getButtonBounds(l, t, rectF)
+                    dragIcon?.setBounds(
+                        rectF.left.toInt(),
+                        rectF.top.toInt(),
+                        rectF.right.toInt(),
+                        rectF.bottom.toInt()
+                    )
+                    dragIcon?.draw(canvas)
                 }
             }
         }
 
         /**
-         * 获取以x、y点为中心的删除按钮区域
+         * 获取以x、y点为中心的按钮区域
          */
-        fun getButtonBoundsInView(x: Float, y: Float, rect: RectF) {
-            val d = BUTTON_DIAMETER * scale
-            val r = d.toInt() shr 1
+        fun getButtonBounds(x: Float, y: Float, rect: RectF) {
+            val r = BUTTON_DIAMETER shr 1
             rect.set(x - r, y - r, x + r, y + r)
-        }
-
-        /**
-         * 释放
-         */
-        fun release() {
-            delIcon.recycle()
         }
     }
 
@@ -722,7 +726,6 @@ class MarkManager(private var context: Context) {
      */
     private inner class OperationRecords {
 
-        private var recordId = 0 // recordId 自增
         private val recordList = arrayListOf<MarkRecord>() // 操作记录
         private var operateIndex = -1 // 当前操作的记录下标
 
@@ -779,7 +782,7 @@ class MarkManager(private var context: Context) {
             y: Float = 0f,
             scale: Float = 1f
         ) {
-            val record = MarkRecord(recordId++, type, mark, index, x, y, scale)
+            val record = MarkRecord(type, mark, index, x, y, scale, rotation = rotation)
             // 如果下标不在最后，先移除下标后的元素，再添加
             if (operateIndex < recordList.lastIndex && operateIndex + 1 >= 0) {
                 for (i in recordList.lastIndex downTo operateIndex + 1) {
@@ -791,28 +794,58 @@ class MarkManager(private var context: Context) {
         }
 
         /**
-         * 撤销
+         * 旋转Mark的x, y坐标
+         */
+        private fun rotateMarkPoint(mark: CorrectMark, rotation: Int) {
+            pointRotation(mark.x, mark.y, arr, rotation)
+            mark.x = arr[0]
+            mark.y = arr[1]
+        }
+
+        /**
+         * 撤销，[undo]和[redo]中包含了大量[rotation]旋转坐标的逻辑，如果不需要旋转，那逻辑会很简洁。
          */
         fun undo() {
             if (recordList.isNullOrEmpty() || operateIndex !in recordList.indices) return
             val record = recordList[operateIndex--]
             val mark = record.mark
+            val r = adjustRotation(rotation - record.rotation)
             when (record.type) {
                 RecordType.ADD -> markList.remove(mark)
-                RecordType.DELETE -> markList.add(record.index, mark)
+                RecordType.DELETE -> {
+                    if (r != 0) {
+                        if (mark.isTypePath) {
+                            mark.segments?.forEach { seg ->
+                                seg.points?.forEach {
+                                    pointRotation(it.x, it.y, arr, r)
+                                    it.set(arr[0], arr[1])
+                                }
+                            }
+                        } else {
+                            rotateMarkPoint(mark, r)
+                        }
+                    }
+                    markList.add(record.index, mark)
+                }
                 RecordType.MOVE -> {
                     if (mark.isTypePath) {
-                        pathMark.getBounds(mark, rectF)
+                        getMarkBounds(mark, rectF)
                         pointF.set(rectF.left, rectF.top)
-                        val tx = record.x - rectF.left
-                        val ty = record.y - rectF.top
-                        mark.segments?.forEach { it ->
-                            it.points?.forEach { it.offset(tx, ty) }
+                        pointRotation(record.x, record.y, arr, r)
+                        var x = arr[0]
+                        var y = arr[1]
+                        if (r == 1 || r == 2) x -= rectF.width()
+                        if (r == 2 || r == 3) y -= rectF.height()
+                        val tx = x - rectF.left
+                        val ty = y - rectF.top
+                        mark.segments?.forEach { seg ->
+                            seg.points?.forEach { it.offset(tx, ty) }
                         }
                     } else {
                         pointF.set(mark.x, mark.y)
-                        mark.x = record.x
-                        mark.y = record.y
+                        pointRotation(record.x, record.y, arr, r)
+                        mark.x = arr[0]
+                        mark.y = arr[1]
                     }
                     record.x = pointF.x
                     record.y = pointF.y
@@ -826,6 +859,7 @@ class MarkManager(private var context: Context) {
                 }
                 RecordType.ADD_SEGMENTS -> record.segments = mark.segments?.removeLast()
             }
+            record.rotation = rotation
         }
 
         /**
@@ -835,22 +869,43 @@ class MarkManager(private var context: Context) {
             if (recordList.isNullOrEmpty() || operateIndex + 1 !in recordList.indices) return
             val record = recordList[++operateIndex]
             val mark = record.mark
+            val r = adjustRotation(rotation - record.rotation)
             when (record.type) {
-                RecordType.ADD -> markList.add(mark)
+                RecordType.ADD -> {
+                    if (r != 0) {
+                        if (mark.isTypePath) {
+                            mark.segments?.forEach { seg ->
+                                seg.points?.forEach {
+                                    pointRotation(it.x, it.y, arr, r)
+                                    it.set(arr[0], arr[1])
+                                }
+                            }
+                        } else {
+                            if (r != 0) rotateMarkPoint(mark, r)
+                        }
+                    }
+                    markList.add(mark)
+                }
                 RecordType.DELETE -> markList.remove(mark)
                 RecordType.MOVE -> {
                     if (mark.isTypePath) {
-                        pathMark.getBounds(mark, rectF)
+                        getMarkBounds(mark, rectF)
                         pointF.set(rectF.left, rectF.top)
-                        val tx = record.x - rectF.left
-                        val ty = record.y - rectF.top
-                        mark.segments?.forEach { it ->
-                            it.points?.forEach { it.offset(tx, ty) }
+                        pointRotation(record.x, record.y, arr, r)
+                        var x = arr[0]
+                        var y = arr[1]
+                        if (r == 1 || r == 2) x -= rectF.width()
+                        if (r == 2 || r == 3) y -= rectF.height()
+                        val tx = x - rectF.left
+                        val ty = y - rectF.top
+                        mark.segments?.forEach { seg ->
+                            seg.points?.forEach { it.offset(tx, ty) }
                         }
                     } else {
                         pointF.set(mark.x, mark.y)
-                        mark.x = record.x
-                        mark.y = record.y
+                        pointRotation(record.x, record.y, arr, r)
+                        mark.x = arr[0]
+                        mark.y = arr[1]
                     }
                     record.x = pointF.x
                     record.y = pointF.y
@@ -862,8 +917,19 @@ class MarkManager(private var context: Context) {
                         record.scale = scale
                     }
                 }
-                RecordType.ADD_SEGMENTS -> record.segments?.let { mark.segments?.add(it) }
+                RecordType.ADD_SEGMENTS -> {
+                    record.segments?.let { seg ->
+                        if (r != 0) {
+                            seg.points?.forEach {
+                                pointRotation(it.x, it.y, arr, r)
+                                it.set(arr[0], arr[1])
+                            }
+                        }
+                        mark.segments?.add(seg)
+                    }
+                }
             }
+            record.rotation = rotation
         }
 
         /**
@@ -902,10 +968,6 @@ class MarkManager(private var context: Context) {
     }
 
     companion object {
-        // 图片缩放范围
-        const val IMAGE_SCALE_MAX = 3f
-        const val IMAGE_SCALE_MIN = .3f
-
         // Mark标记缩放范围
         const val MARK_SCALE_MAX = 1.5f
         const val MARK_SCALE_MIN = .5f

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -13,6 +14,7 @@ import com.junpu.log.L
 import com.junpu.oral.correct.utils.resizeImage
 import com.junpu.utils.isNotNullOrBlank
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -22,10 +24,17 @@ import kotlin.math.min
  */
 class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
 
+    companion object {
+        // 图片缩放范围
+        const val IMAGE_SCALE_MAX = 3f
+        const val IMAGE_SCALE_MIN = .3f
+    }
+
     private val detector by lazy { ScaleGestureDetector(context, this) }
 
-    // 作业
-    private var bitmap: Bitmap? = null
+    private var srcBitmap: Bitmap? = null // 原图
+    private var bitmap: Bitmap? = null // 作业
+    private var markBitmap: Bitmap? = null // mark
 
     // 缩放参数
     private var scaleBaseValue = 0f // 每次缩放的基数
@@ -35,6 +44,8 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     // 拖动参数
     private var lastMoveX = 0f
     private var lastMoveY = 0f
+    private var lastMarkMoveX = 0f
+    private var lastMarkMoveY = 0f
     private var moveValue = 10 // 触发移动最小距离
     private var continuousDrag = false // 触发持续拖动，第一次移动moveValue距离后触发持续拖动，直到手指离开屏幕
 
@@ -49,6 +60,17 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     private var isDragMark = false // 是否为拖动模式
 
     private lateinit var getText: () -> String
+
+    // 图片基本数据
+    private var degree = 0f // 旋转角度
+    private var translateX = 0f // 当前移动X轴距离
+    private var translateY = 0f // 当前移动Y轴距离
+    private var scale = 1f // 当前缩放系数
+        set(value) {
+            field = min(IMAGE_SCALE_MAX, max(IMAGE_SCALE_MIN, value))
+        }
+
+    private val pointF = PointF() // 临时地址
 
     constructor(context: Context?) : super(context)
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
@@ -78,16 +100,25 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     override fun onDraw(canvas: Canvas?) {
         canvas ?: return
         bitmap ?: return
+        markBitmap ?: return
         // 画图片
         canvas.drawBitmap(bitmap!!, curMatrix, null)
         // 画标记
-        markManager.draw(canvas)
+        canvas.drawBitmap(markBitmap!!, curMatrix, null)
+    }
+
+    override fun invalidate() {
+        markManager.draw()
+        super.invalidate()
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         event ?: return super.onTouchEvent(event)
         val x = event.x
         val y = event.y
+        toMarkPoint(x, y, pointF)
+        val mx = pointF.x
+        val my = pointF.y
         val pointerCount = event.pointerCount
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -95,7 +126,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                     touchMode = TouchMode.DRAG
                 } else {
                     // 触摸区域判定
-                    when (markManager.checkTouchArea(x, y)) {
+                    when (markManager.checkTouchArea(mx, my)) {
                         // 触摸到了删除按钮
                         MarkManager.TouchArea.DELETE -> {
                             isDelMark = true
@@ -114,16 +145,16 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                         MarkManager.TouchArea.NONE -> {
                             var flag = true
                             when (mode) {
-                                Mode.RIGHT -> markManager.generateRight(x, y)
-                                Mode.WRONG -> markManager.generateWrong(x, y)
+                                Mode.RIGHT -> markManager.generateRight(mx, my)
+                                Mode.WRONG -> markManager.generateWrong(mx, my)
                                 Mode.TEXT -> {
                                     val text = getText()
                                     if (text.isNotNullOrBlank())
-                                        markManager.generateText(x, y, text)
+                                        markManager.generateText(mx, my, text)
                                     else
                                         flag = false
                                 }
-                                Mode.PEN -> markManager.generatePath(x, y)
+                                Mode.PEN -> markManager.generatePath(mx, my)
                                 else -> Unit
                             }
                             if (flag) markManager.lockMark(false)
@@ -132,37 +163,41 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                 }
                 lastMoveX = x
                 lastMoveY = y
+                lastMarkMoveX = mx
+                lastMarkMoveY = my
                 if (mode != Mode.NONE) invalidate()
             }
             MotionEvent.ACTION_MOVE -> {
                 val tx = x - lastMoveX
                 val ty = y - lastMoveY
+                val mtx = mx - lastMarkMoveX
+                val mty = my - lastMarkMoveY
                 // 拖拽模式
                 if (mode == Mode.NONE) {
                     if (touchMode == TouchMode.DRAG && pointerCount == 1 &&
                         ((abs(tx) > moveValue || abs(ty) > moveValue) || continuousDrag)
                     ) {
-                        markManager.translateX += tx
-                        markManager.translateY += ty
+                        translateX += tx
+                        translateY += ty
                         curMatrix.postTranslate(tx, ty)
                         invalidate()
-                        lastMoveX = x
-                        lastMoveY = y
                         continuousDrag = true
                     }
                 } else { // 标记模式
                     if (isDelMark) return false
                     if (mode == Mode.PEN && !isDragMark) {
-                        markManager.addPathPoint(x, y, tx, ty, continuousDrag)
+                        markManager.addPathPoint(mx, my, mtx, mty, continuousDrag)
                         continuousDrag = true
                     } else if ((abs(tx) > moveValue || abs(ty) > moveValue) || continuousDrag) {
-                        markManager.translateMark(tx, ty, continuousDrag)
+                        markManager.translateMark(mtx, mty, continuousDrag)
                         continuousDrag = true
                     }
                     invalidate()
-                    lastMoveX = x
-                    lastMoveY = y
                 }
+                lastMoveX = x
+                lastMoveY = y
+                lastMarkMoveX = mx
+                lastMarkMoveY = my
             }
             MotionEvent.ACTION_UP -> {
                 touchMode = TouchMode.NONE
@@ -178,14 +213,14 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     override fun onScale(detector: ScaleGestureDetector?): Boolean {
         detector ?: return false
         if (mode == Mode.NONE && touchMode == TouchMode.ZOOM) {
-            val oldScale = markManager.scale
-            markManager.scale = scaleBaseValue * detector.scaleFactor
-            if (markManager.scale == oldScale) return false
-            val scaleFactor = markManager.scale / oldScale
+            val oldScale = scale
+            scale = scaleBaseValue * detector.scaleFactor
+            if (scale == oldScale) return false
+            val scaleFactor = scale / oldScale
             curMatrix.postScale(scaleFactor, scaleFactor, scalePointX, scalePointY)
             curMatrix.getValues(matrixValues)
-            markManager.translateX = matrixValues[Matrix.MTRANS_X]
-            markManager.translateY = matrixValues[Matrix.MTRANS_Y]
+            translateX = matrixValues[Matrix.MTRANS_X]
+            translateY = matrixValues[Matrix.MTRANS_Y]
             invalidate()
         }
         return false
@@ -196,7 +231,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         if (mode == Mode.NONE) {
             touchMode = TouchMode.ZOOM
         }
-        scaleBaseValue = markManager.scale
+        scaleBaseValue = scale
         scalePointX = detector.focusX
         scalePointY = detector.focusY
         return true
@@ -207,50 +242,71 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     }
 
     /**
+     * 坐标转换，从view坐标到mark坐标
+     */
+    private fun toMarkPoint(x: Float, y: Float, point: PointF) {
+        val rx = (x - translateX) / scale
+        val ry = (y - translateY) / scale
+        point.set(rx, ry)
+    }
+
+    /**
      * 初始化Bitmap配置
      */
     private fun initBitmapConfig() {
         val w = bitmap?.width ?: return
         val h = bitmap?.height ?: return
-        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${w}/${h}")
         val scaleX = width / w.toFloat()
         val scaleY = height / h.toFloat()
-        val scale = min(scaleX, scaleY)
-        val tx = if (scaleX > scaleY) (width - w) / 2f else 0f
-        val ty = if (scaleX < scaleY) (height - h) / 2f else 0f
+        scale = min(scaleX, scaleY)
+        translateX = if (scaleX > scaleY) (width - w * scale) / 2f else 0f
+        translateY = if (scaleX < scaleY) (height - h * scale) / 2f else 0f
+        L.vv("initBitmapConfig view: ${width}/${height}, bitmap: ${w}/${h}, scale: $scaleX/$scaleY, translate: $translateX/$translateY")
         curMatrix.run {
             reset()
             postScale(scale, scale)
-            postTranslate(tx, ty)
+            postTranslate(translateX, translateY)
         }
-        markManager.init(w, h, scale, tx, ty)
+        markBitmap?.recycle()
+        markBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        markManager.initBitmap(markBitmap!!)
     }
 
     /**
      * 设置背景图片
      */
     fun setBitmap(bitmap: Bitmap) {
+        srcBitmap = bitmap
         val w = bitmap.width
         val h = bitmap.height
-        val size = resizeImage(w, h)
-        val scale = min(size.width / w.toFloat(), size.height / h.toFloat())
-        val matrix = scaleMatrix(scale, scale)
+        val matrix = getResizeScaleMatrix(w, h)
         this.bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, matrix, false)
-        if (this.bitmap != bitmap) bitmap.recycle()
         initBitmapConfig()
         invalidate()
+    }
+
+    /**
+     * 获取缩放后的矩阵
+     */
+    private fun getResizeScaleMatrix(w: Int, h: Int): Matrix {
+        val size = resizeImage(w, h)
+        val scale = min(size.width / w.toFloat(), size.height / h.toFloat())
+        return scaleMatrix(scale, scale)
     }
 
     /**
      * 向左旋转
      */
     fun rotate(clockwise: Boolean = true) {
-//        val bitmap = bitmap ?: return
-//        val degree = if (clockwise) 90f else -90f
-//        val x = markManager.translateX + bitmap.width * markManager.scale / 2
-//        val y = markManager.translateY + bitmap.height * markManager.scale / 2
-//        curMatrix.postRotate(degree, x, y)
-//        invalidate()
+        val b = srcBitmap ?: return
+        val deg = if (clockwise) 90f else -90f
+        degree = (degree + deg) % 360
+        val m = getResizeScaleMatrix(b.height, b.width).apply { postRotate(degree) }
+        if (this.bitmap != b) this.bitmap?.recycle()
+        this.bitmap = Bitmap.createBitmap(b, 0, 0, b.width, b.height, m, false)
+        initBitmapConfig()
+        markManager.rotate(degree) // 必须放initBitmapConfig后面
+        invalidate()
     }
 
     /**

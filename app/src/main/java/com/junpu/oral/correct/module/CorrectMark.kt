@@ -8,7 +8,6 @@ import android.graphics.PointF
  * @date 2021/2/25
  */
 data class CorrectMark(
-    var id: Int,
     var type: String?, // 类型 symbol、text、drawing
     var x: Float,
     var y: Float,
@@ -17,22 +16,8 @@ data class CorrectMark(
     var text: String? = null,
     var width: Int = 0, // 文字宽度
     var segments: ArrayList<PathPoint>? = null, // drawing路径
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as CorrectMark
-
-        if (id != other.id) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return id
-    }
-}
+    var rotation: Int = 0, // 旋转角度0，1，2，3 -> 0，90，180，270
+)
 
 data class PathPoint(
     var points: ArrayList<PointF>?,

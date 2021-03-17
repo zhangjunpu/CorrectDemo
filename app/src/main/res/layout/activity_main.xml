@@ -67,22 +67,26 @@
             android:paddingStart="10dp"
             android:paddingEnd="10dp">
 
+            <View
+                android:id="@+id/btnRotateLeft"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_left" />
+
+            <View
+                android:id="@+id/btnRotateRight"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_right" />
+
             <RadioGroup
                 android:id="@+id/radioDrawMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
                 android:orientation="horizontal">
-
-                <RadioButton
-                    android:id="@+id/btnTouch"
-                    style="@style/CorrectMarkToolsButton"
-                    android:background="@drawable/selector_touch"
-                    android:checked="true" />
 
                 <RadioButton
                     android:id="@+id/btnRight"
                     style="@style/CorrectMarkToolsButton"
-                    android:layout_marginStart="15dp"
                     android:background="@drawable/selector_right" />
 
                 <RadioButton
@@ -117,17 +121,6 @@
                 style="@style/CorrectMarkToolsButton"
                 android:layout_marginStart="15dp"
                 android:background="@drawable/ripple_clear" />
-
-            <View
-                android:id="@+id/btnRotateLeft"
-                style="@style/CorrectMarkToolsButton"
-                android:layout_marginStart="15dp"
-                android:background="@drawable/ripple_rotate_left" />
-
-            <View
-                android:id="@+id/btnRotateRight"
-                style="@style/CorrectMarkToolsButton"
-                android:background="@drawable/ripple_rotate_right" />
         </LinearLayout>
     </HorizontalScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

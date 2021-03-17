@@ -3,7 +3,8 @@ package com.junpu.oral.correct
 import android.Manifest
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
+import android.view.View
+import android.widget.RadioButton
 import com.junpu.gopermissions.PermissionsActivity
 import com.junpu.oral.correct.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityMainBinding
@@ -13,6 +14,7 @@ import com.junpu.utils.setVisibility
 class MainActivity : PermissionsActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private var checkId = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,20 +23,31 @@ class MainActivity : PermissionsActivity() {
 
         binding.run {
             correctView.setGetText { binding.editText.text.toString() }
-            radioDrawMode.setOnCheckedChangeListener { _, checkedId ->
-                val mode = when (checkedId) {
-                    R.id.btnTouch -> CorrectView.Mode.NONE
-                    R.id.btnRight -> CorrectView.Mode.RIGHT
-                    R.id.btnWrong -> CorrectView.Mode.WRONG
-                    R.id.btnPen -> CorrectView.Mode.PEN
-                    R.id.btnText -> CorrectView.Mode.TEXT
-                    else -> CorrectView.Mode.NONE
+            val onRadioClick = { view: View ->
+                val mode = if (checkId == view.id) {
+                    checkId = -1
+                    radioDrawMode.clearCheck()
+                    CorrectView.Mode.NONE
+                } else {
+                    checkId = view.id
+                    radioDrawMode.check(view.id)
+                    when (view.id) {
+                        R.id.btnRight -> CorrectView.Mode.RIGHT
+                        R.id.btnWrong -> CorrectView.Mode.WRONG
+                        R.id.btnPen -> CorrectView.Mode.PEN
+                        R.id.btnText -> CorrectView.Mode.TEXT
+                        else -> CorrectView.Mode.NONE
+                    }
                 }
                 correctView.setMode(mode)
-                editText.setVisibility(checkedId == R.id.btnText)
+                editText.setVisibility(view.id == R.id.btnText)
                 editText.text = null
-                seekBar.setVisibility(checkedId != R.id.btnTouch)
+                seekBar.setVisibility(mode != CorrectView.Mode.NONE)
             }
+            btnRight.setOnClickListener(onRadioClick)
+            btnWrong.setOnClickListener(onRadioClick)
+            btnPen.setOnClickListener(onRadioClick)
+            btnText.setOnClickListener(onRadioClick)
 
             var continuousScale = false
             seekBar.doOnSeekBarChange(
