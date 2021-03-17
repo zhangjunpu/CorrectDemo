@@ -1,14 +1,12 @@
 package com.junpu.oral.correct.correct
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Matrix
-import android.graphics.PointF
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.scaleMatrix
 import com.junpu.log.L
 import com.junpu.oral.correct.utils.resizeImage
@@ -23,12 +21,6 @@ import kotlin.math.min
  * @date 2021/2/22
  */
 class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
-
-    companion object {
-        // 图片缩放范围
-        const val IMAGE_SCALE_MAX = 3f
-        const val IMAGE_SCALE_MIN = .3f
-    }
 
     private val detector by lazy { ScaleGestureDetector(context, this) }
 
@@ -95,6 +87,8 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         markManager.release()
+        bitmap?.recycle()
+        markBitmap?.recycle()
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -273,6 +267,24 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     }
 
     /**
+     * 生成Bitmap
+     */
+    fun toBitmap(): Bitmap? {
+        val b = bitmap ?: return null
+        val mb = markBitmap ?: return null
+        L.vv("b: ${b.width}/${b.height}, mb: ${mb.width}/${mb.height}")
+        val bitmap = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
+        markManager.save {
+            bitmap.applyCanvas {
+                val rect = Rect(0, 0, b.width, b.height)
+                drawBitmap(b, null, rect, null)
+                drawBitmap(mb, null, rect, null)
+            }
+        }
+        return bitmap
+    }
+
+    /**
      * 设置背景图片
      */
     fun setBitmap(bitmap: Bitmap) {
@@ -373,6 +385,12 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         WRONG,
         PEN,
         TEXT,
+    }
+
+    companion object {
+        // 图片缩放范围
+        const val IMAGE_SCALE_MAX = 3f
+        const val IMAGE_SCALE_MIN = .3f
     }
 
 }

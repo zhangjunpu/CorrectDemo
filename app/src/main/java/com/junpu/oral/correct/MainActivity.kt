@@ -5,11 +5,15 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
 import android.widget.RadioButton
+import androidx.core.view.drawToBitmap
 import com.junpu.gopermissions.PermissionsActivity
+import com.junpu.log.L
 import com.junpu.oral.correct.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityMainBinding
 import com.junpu.oral.correct.utils.doOnSeekBarChange
+import com.junpu.utils.gone
 import com.junpu.utils.setVisibility
+import com.junpu.utils.visible
 
 class MainActivity : PermissionsActivity() {
 
@@ -40,7 +44,7 @@ class MainActivity : PermissionsActivity() {
                     }
                 }
                 correctView.setMode(mode)
-                editText.setVisibility(view.id == R.id.btnText)
+                editText.setVisibility(mode == CorrectView.Mode.TEXT)
                 editText.text = null
                 seekBar.setVisibility(mode != CorrectView.Mode.NONE)
             }
@@ -69,6 +73,16 @@ class MainActivity : PermissionsActivity() {
             }
             btnRotateRight.setOnClickListener {
                 correctView.rotate()
+            }
+            btnSave.setOnClickListener {
+                correctView.toBitmap()?.let {
+                    L.vv("save bitmap: ${it.width}/${it.height}")
+                    imageView.setImageBitmap(it)
+                    layoutImage.visible()
+                }
+            }
+            layoutImage.setOnClickListener {
+                it.gone()
             }
         }
 

@@ -41,10 +41,10 @@ class MarkManager(private var context: Context) {
     private val curMark: CorrectMark? // 当前选中Mark
         get() = if (curIndex in markList.indices) markList[curIndex] else null
 
-    // 临时内存地址指针
-    private var pointF = PointF() // 存放坐标转换的临时空间
-    private var rectF = RectF() // 存放边界的临时空间
-    private var arr = FloatArray(4) // 坐标转换临时空间
+    // 临时内存地址
+    private var pointF = PointF() // 临时PointF
+    private var rectF = RectF() // 临时RectF
+    private var arr = FloatArray(4) // 临时数组
     private var lockedMark: CorrectMark? = null // 处理中的mark指针
     private var lockedPoints: MutableList<PointF>? = null // 操作中的PathPoint
 
@@ -401,6 +401,19 @@ class MarkManager(private var context: Context) {
      * 是否为path模式
      */
     private val CorrectMark.isTypePath: Boolean get() = type == MARK_TYPE_DRAWING
+
+    /**
+     * 保存图片时消除选中框
+     */
+    fun save(block: () -> Unit) {
+        if (curIndex == -1) return
+        val oldIndex = curIndex
+        curIndex = -1
+        draw()
+        block()
+        curIndex = oldIndex
+        draw()
+    }
 
     /**
      * 符号相关
