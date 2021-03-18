@@ -25,14 +25,18 @@
             android:name="design_height_in_dp"
             android:value="800" />
 
-        <activity
-            android:name=".MainActivity"
-            android:theme="@style/Theme.FullScreen">
+        <activity android:name=".MainActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CorrectActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.FullScreen" />
     </application>
 
 </manifest>

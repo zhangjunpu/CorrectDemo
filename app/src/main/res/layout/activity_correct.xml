@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    tools:context=".CorrectActivity">
+
+    <com.junpu.oral.correct.correct.CorrectView
+        android:id="@+id/correctView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutTools"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0"
+        tools:layout_editor_absoluteX="34dp" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutToolsDynamic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#DBE9FF"
+        app:layout_constraintBottom_toTopOf="@id/layoutTools">
+
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:max="100"
+            android:progress="50"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintWidth_percent=".5" />
+
+        <EditText
+            android:id="@+id/editText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/input_text"
+            android:importantForAutofill="no"
+            android:inputType="none"
+            android:minHeight="40dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:textColor="#666"
+            android:textColorHint="#999"
+            android:textSize="14sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/seekBar" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <HorizontalScrollView
+        android:id="@+id/layoutTools"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#DBE9FF"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/layoutToolsContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="1dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp">
+
+            <View
+                android:id="@+id/btnRotateLeft"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_left" />
+
+            <View
+                android:id="@+id/btnRotateRight"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_right" />
+
+            <RadioGroup
+                android:id="@+id/radioDrawMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/btnRight"
+                    style="@style/CorrectMarkToolsButton"
+                    android:background="@drawable/selector_right" />
+
+                <RadioButton
+                    android:id="@+id/btnWrong"
+                    style="@style/CorrectMarkToolsButton"
+                    android:background="@drawable/selector_wrong" />
+
+                <RadioButton
+                    android:id="@+id/btnText"
+                    style="@style/CorrectMarkToolsButton"
+                    android:background="@drawable/selector_text" />
+
+                <RadioButton
+                    android:id="@+id/btnPen"
+                    style="@style/CorrectMarkToolsButton"
+                    android:background="@drawable/selector_pen" />
+            </RadioGroup>
+
+            <View
+                android:id="@+id/btnUndo"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/ripple_undo" />
+
+            <View
+                android:id="@+id/btnRedo"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_redo" />
+
+            <View
+                android:id="@+id/btnClear"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/ripple_clear" />
+
+            <View
+                android:id="@+id/btnSave"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/ripple_save" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <FrameLayout
+        android:id="@+id/layoutImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="@string/image" />
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

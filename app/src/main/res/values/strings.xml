@@ -2,4 +2,6 @@
     <string name="app_name">CorrectDemo</string>
     <string name="image">image</string>
     <string name="input_text">请输入要添加的文字，点击屏幕放置</string>
+    <string name="photo_album">相册</string>
+    <string name="default_image">默认图片</string>
 </resources>
