@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    tools:context=".ui.CorrectActivity">
+
+    <com.junpu.oral.correct.mark.MarkPointView
+        android:id="@+id/markView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutTools"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <HorizontalScrollView
+        android:id="@+id/layoutTools"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#DBE9FF"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:id="@+id/layoutToolsContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="1dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp">
+
+            <View
+                android:id="@+id/btnRotateLeft"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_left" />
+
+            <View
+                android:id="@+id/btnRotateRight"
+                style="@style/CorrectMarkToolsButton"
+                android:background="@drawable/ripple_rotate_right" />
+
+            <View
+                android:id="@+id/btnClear"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/ripple_clear" />
+
+            <View
+                android:id="@+id/btnSave"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/ripple_save" />
+
+            <CheckBox
+                android:id="@+id/checkMarkDis"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:checked="false"
+                android:background="@drawable/selector_mark_dis"
+                android:gravity="center"
+                android:padding="0dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,13 +1,16 @@
-package com.junpu.oral.correct
+package com.junpu.oral.correct.ui
 
 import android.os.Bundle
 import android.view.View
 import com.junpu.gopermissions.PermissionsActivity
 import com.junpu.log.L
+import com.junpu.oral.correct.Cache
+import com.junpu.oral.correct.R
 import com.junpu.oral.correct.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityCorrectBinding
 import com.junpu.oral.correct.utils.doOnSeekBarChange
 import com.junpu.utils.gone
+import com.junpu.utils.launch
 import com.junpu.utils.setVisibility
 import com.junpu.utils.visible
 
@@ -73,12 +76,9 @@ class CorrectActivity : PermissionsActivity() {
             btnSave.setOnClickListener {
                 correctView.toBitmap()?.let {
                     L.vv("save bitmap: ${it.width}/${it.height}")
-                    imageView.setImageBitmap(it)
-                    layoutImage.visible()
+                    Cache.previewBitmap = it
+                    launch(ImagePreviewActivity::class.java)
                 }
-            }
-            layoutImage.setOnClickListener {
-                it.gone()
             }
 
             Cache.bitmap?.let { correctView.setBitmap(it) }

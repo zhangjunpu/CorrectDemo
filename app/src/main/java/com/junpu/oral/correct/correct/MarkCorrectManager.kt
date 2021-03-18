@@ -5,18 +5,18 @@ import android.graphics.*
 import android.text.TextPaint
 import androidx.core.content.ContextCompat
 import com.junpu.oral.correct.R
-import com.junpu.oral.correct.module.CorrectMark
+import com.junpu.oral.correct.module.MarkCorrect
 import com.junpu.oral.correct.module.MarkRecord
 import com.junpu.oral.correct.module.PathPoint
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * 标记管理
+ * 标记批改管理
  * @author junpu
  * @date 2021/2/25
  */
-class MarkManager(private var context: Context) {
+class MarkCorrectManager(private var context: Context) {
 
     private val symbolMark by lazy { SymbolMark() }
     private val textMark by lazy { TextMark() }
@@ -36,16 +36,16 @@ class MarkManager(private var context: Context) {
     private var rotation = 0 // 旋转方向，0,1,2,3 -> 0,90,180,270
 
     // mark数据
-    private val markList = arrayListOf<CorrectMark>() // mark数据队列
+    private val markList = arrayListOf<MarkCorrect>() // mark数据队列
     private var curIndex = -1 // 当前选中
-    private val curMark: CorrectMark? // 当前选中Mark
+    private val curMark: MarkCorrect? // 当前选中Mark
         get() = if (curIndex in markList.indices) markList[curIndex] else null
 
     // 临时内存地址
     private var pointF = PointF() // 临时PointF
     private var rectF = RectF() // 临时RectF
     private var arr = FloatArray(4) // 临时数组
-    private var lockedMark: CorrectMark? = null // 处理中的mark指针
+    private var lockedMark: MarkCorrect? = null // 处理中的mark指针
     private var lockedPoints: MutableList<PointF>? = null // 操作中的PathPoint
 
     // mark Canvas
@@ -92,7 +92,7 @@ class MarkManager(private var context: Context) {
         addMark(pathMark.newMark(x, y))
     }
 
-    private fun addMark(mark: CorrectMark?) {
+    private fun addMark(mark: MarkCorrect?) {
         mark ?: return
         markList.add(mark)
         recordManager.addAddRecord(mark)
@@ -284,7 +284,7 @@ class MarkManager(private var context: Context) {
     /**
      * 获取mark在View上的边界
      */
-    private fun getMarkBounds(mark: CorrectMark, rect: RectF) {
+    private fun getMarkBounds(mark: MarkCorrect, rect: RectF) {
         when (mark.type) {
             MARK_TYPE_SYMBOL -> symbolMark.getBounds(mark, rect)
             MARK_TYPE_TEXT -> textMark.getBounds(mark, rect)
@@ -387,7 +387,7 @@ class MarkManager(private var context: Context) {
     /**
      * 获取mark相对于当前方向应该旋转的角度
      */
-    private fun getMarkDegree(mark: CorrectMark, rotation: Int): Float {
+    private fun getMarkDegree(mark: MarkCorrect, rotation: Int): Float {
         val r = rotation - mark.rotation
         return (r * 90f) % 360
     }
@@ -400,13 +400,16 @@ class MarkManager(private var context: Context) {
     /**
      * 是否为path模式
      */
-    private val CorrectMark.isTypePath: Boolean get() = type == MARK_TYPE_DRAWING
+    private val MarkCorrect.isTypePath: Boolean get() = type == MARK_TYPE_DRAWING
 
     /**
      * 保存图片时消除选中框
      */
     fun save(block: () -> Unit) {
-        if (curIndex == -1) return
+        if (curIndex == -1) {
+            block()
+            return
+        }
         val oldIndex = curIndex
         curIndex = -1
         draw()
@@ -435,14 +438,14 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的符号
          */
-        fun newMark(x: Float, y: Float, symbol: String?): CorrectMark {
-            return CorrectMark(MARK_TYPE_SYMBOL, x, y, markScale, symbol, rotation = rotation)
+        fun newMark(x: Float, y: Float, symbol: String?): MarkCorrect {
+            return MarkCorrect(MARK_TYPE_SYMBOL, x, y, markScale, symbol, rotation = rotation)
         }
 
         /**
          * 画勾、叉
          */
-        fun draw(canvas: Canvas, mark: CorrectMark) {
+        fun draw(canvas: Canvas, mark: MarkCorrect) {
             val img = (if (mark.symbol == SYMBOL_TYPE_RIGHT) symbolRight else symbolWrong) ?: return
             getBounds(mark, rectF)
             getSize(mark, pointF)
@@ -462,7 +465,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取Mark的边界
          */
-        fun getBounds(mark: CorrectMark, rect: RectF) {
+        fun getBounds(mark: MarkCorrect, rect: RectF) {
             rect.setEmpty()
             val r = adjustRotation(rotation - mark.rotation)
             val swap = r and 1 == 1
@@ -479,7 +482,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取符号的尺寸
          */
-        private fun getSize(mark: CorrectMark, rect: PointF) {
+        private fun getSize(mark: MarkCorrect, rect: PointF) {
             var w = 0f
             var h = 0f
             when (mark.symbol) {
@@ -513,14 +516,14 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的mark
          */
-        fun newMark(x: Float, y: Float, text: String): CorrectMark {
-            return CorrectMark(MARK_TYPE_TEXT, x, y, markScale, text = text, rotation = rotation)
+        fun newMark(x: Float, y: Float, text: String): MarkCorrect {
+            return MarkCorrect(MARK_TYPE_TEXT, x, y, markScale, text = text, rotation = rotation)
         }
 
         /**
          * 画文字
          */
-        fun draw(canvas: Canvas, mark: CorrectMark) {
+        fun draw(canvas: Canvas, mark: MarkCorrect) {
             if (mark.text.isNullOrBlank()) return
             val x = mark.x
             val y = mark.y
@@ -541,7 +544,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取mark的边界
          */
-        fun getBounds(mark: CorrectMark, rect: RectF) {
+        fun getBounds(mark: MarkCorrect, rect: RectF) {
             rect.setEmpty()
             val r = adjustRotation(rotation - mark.rotation)
             val swap = r and 3 == 1
@@ -558,7 +561,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取文字的尺寸
          */
-        private fun getSize(mark: CorrectMark, rect: PointF) {
+        private fun getSize(mark: MarkCorrect, rect: PointF) {
             val texts = mark.getTextForEachLine()
             val textSize = TEXT_SIZE * mark.scale
             textPaint.textSize = textSize
@@ -570,7 +573,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取每一行的文本
          */
-        private fun CorrectMark.getTextForEachLine(): List<String> {
+        private fun MarkCorrect.getTextForEachLine(): List<String> {
             return if (text.isNullOrBlank()) emptyList() else text!!.split("\n")
         }
     }
@@ -597,15 +600,15 @@ class MarkManager(private var context: Context) {
         /**
          * 生成新的mark
          */
-        fun newMark(x: Float, y: Float): CorrectMark {
+        fun newMark(x: Float, y: Float): MarkCorrect {
             val segments = arrayListOf(newPathPoint)
-            return CorrectMark(MARK_TYPE_DRAWING, x, y, markScale, segments = segments)
+            return MarkCorrect(MARK_TYPE_DRAWING, x, y, markScale, segments = segments)
         }
 
         /**
          * 画path
          */
-        fun draw(canvas: Canvas, mark: CorrectMark) {
+        fun draw(canvas: Canvas, mark: MarkCorrect) {
             if (mark.segments.isNullOrEmpty()) return
             for (it in mark.segments!!) {
                 if (it.points.isNullOrEmpty()) continue
@@ -625,7 +628,7 @@ class MarkManager(private var context: Context) {
         /**
          * 获取Mark的边界
          */
-        fun getBounds(mark: CorrectMark, rect: RectF) {
+        fun getBounds(mark: MarkCorrect, rect: RectF) {
             rect.setEmpty()
             val segments = mark.segments
             if (segments.isNullOrEmpty()) return
@@ -690,7 +693,7 @@ class MarkManager(private var context: Context) {
         /**
          * 画mark的边框
          */
-        fun draw(canvas: Canvas, mark: CorrectMark) {
+        fun draw(canvas: Canvas, mark: MarkCorrect) {
             getMarkBounds(mark, rectF)
             if (!rectF.isEmpty) {
                 // 画框
@@ -745,21 +748,21 @@ class MarkManager(private var context: Context) {
         /**
          * 添加 [RecordType.ADD] 类型记录
          */
-        fun addAddRecord(mark: CorrectMark) {
+        fun addAddRecord(mark: MarkCorrect) {
             addRecord(mark, RecordType.ADD)
         }
 
         /**
          * 添加 [RecordType.DELETE] 类型记录
          */
-        fun addDeleteRecord(mark: CorrectMark, index: Int) {
+        fun addDeleteRecord(mark: MarkCorrect, index: Int) {
             addRecord(mark, RecordType.DELETE, index)
         }
 
         /**
          * 添加 [RecordType.MOVE] 类型的记录
          */
-        fun addMoveRecord(mark: CorrectMark) {
+        fun addMoveRecord(mark: MarkCorrect) {
             var x = mark.x
             var y = mark.y
             if (mark.isTypePath) {
@@ -773,14 +776,14 @@ class MarkManager(private var context: Context) {
         /**
          * 添加 [RecordType.SCALE] 类型的记录
          */
-        fun addScaleRecord(mark: CorrectMark) {
+        fun addScaleRecord(mark: MarkCorrect) {
             addRecord(mark, RecordType.SCALE, scale = mark.scale)
         }
 
         /**
          * 添加 [RecordType.ADD_SEGMENTS] 类型记录
          */
-        fun addSegmentsRecord(mark: CorrectMark) {
+        fun addSegmentsRecord(mark: MarkCorrect) {
             addRecord(mark, RecordType.ADD_SEGMENTS)
         }
 
@@ -788,7 +791,7 @@ class MarkManager(private var context: Context) {
          * 添加记录
          */
         private fun addRecord(
-            mark: CorrectMark,
+            mark: MarkCorrect,
             type: RecordType,
             index: Int = 0,
             x: Float = 0f,
@@ -809,7 +812,7 @@ class MarkManager(private var context: Context) {
         /**
          * 旋转Mark的x, y坐标
          */
-        private fun rotateMarkPoint(mark: CorrectMark, rotation: Int) {
+        private fun rotateMarkPoint(mark: MarkCorrect, rotation: Int) {
             pointRotation(mark.x, mark.y, arr, rotation)
             mark.x = arr[0]
             mark.y = arr[1]

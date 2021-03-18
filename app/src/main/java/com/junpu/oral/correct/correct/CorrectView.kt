@@ -47,7 +47,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     private val curMatrix = Matrix() // 图片矩阵
     private val matrixValues = FloatArray(9) // 矩阵数组
 
-    private var markManager = MarkManager(context)
+    private val markManager = MarkCorrectManager(context)
     private var isDelMark = false // 是否为删除模式
     private var isDragMark = false // 是否为拖动模式
 
@@ -122,21 +122,21 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                     // 触摸区域判定
                     when (markManager.checkTouchArea(mx, my)) {
                         // 触摸到了删除按钮
-                        MarkManager.TouchArea.DELETE -> {
+                        MarkCorrectManager.TouchArea.DELETE -> {
                             isDelMark = true
                             markManager.removeMark()
                         }
                         // 触摸到了拖动按钮
-                        MarkManager.TouchArea.DRAG -> {
+                        MarkCorrectManager.TouchArea.DRAG -> {
                             isDragMark = true
                             markManager.lockMark(false)
                         }
                         // 触摸到了某个标记
-                        MarkManager.TouchArea.MARK -> {
+                        MarkCorrectManager.TouchArea.MARK -> {
                             markManager.lockMark(true)
                         }
                         // 触摸到了空白区域
-                        MarkManager.TouchArea.NONE -> {
+                        MarkCorrectManager.TouchArea.NONE -> {
                             var flag = true
                             when (mode) {
                                 Mode.RIGHT -> markManager.generateRight(mx, my)

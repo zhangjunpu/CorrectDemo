@@ -7,7 +7,7 @@ import android.graphics.PointF
  * @author junpu
  * @date 2021/2/25
  */
-data class CorrectMark(
+data class MarkCorrect(
     var type: String?, // 类型 symbol、text、drawing
     var x: Float,
     var y: Float,

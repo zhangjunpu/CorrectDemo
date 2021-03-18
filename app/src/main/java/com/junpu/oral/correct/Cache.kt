@@ -9,4 +9,5 @@ import android.graphics.Bitmap
  */
 object Cache {
     var bitmap: Bitmap? = null
+    var previewBitmap: Bitmap? = null
 }

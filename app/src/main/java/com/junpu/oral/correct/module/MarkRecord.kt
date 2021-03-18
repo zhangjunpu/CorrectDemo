@@ -1,6 +1,6 @@
 package com.junpu.oral.correct.module
 
-import com.junpu.oral.correct.correct.MarkManager
+import com.junpu.oral.correct.correct.MarkCorrectManager
 
 /**
  * 操作记录
@@ -8,8 +8,8 @@ import com.junpu.oral.correct.correct.MarkManager
  * @date 2021/3/10
  */
 data class MarkRecord(
-    var type: MarkManager.RecordType, // 操作类型
-    var mark: CorrectMark, // 操作的mark
+    var type: MarkCorrectManager.RecordType, // 操作类型
+    var mark: MarkCorrect, // 操作的mark
     var index: Int = 0, // DELETE 操作前 mark 所在列表的位置
     var x: Float = 0f, // MOVE 操作之前的x
     var y: Float = 0f, // MOVE 操作之前的y
