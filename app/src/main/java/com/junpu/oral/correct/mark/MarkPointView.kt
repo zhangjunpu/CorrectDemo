@@ -20,8 +20,14 @@ import kotlin.math.min
  */
 class MarkPointView : View {
 
-    private var srcBitmap: Bitmap? = null // 原图
-    private var bitmap: Bitmap? = null // 作业
+    // 原始图片
+    private var originalSrcBitmap: Bitmap? = null // 原图
+    private var originalBinBitmap: Bitmap? = null // 二值化
+    private val originalBitmap: Bitmap?
+        get() = if (isShowingBin) originalBinBitmap else originalSrcBitmap
+    private var isShowingBin = false // 当前显示的是原图
+
+    private var bitmap: Bitmap? = null // 当前图片
     private var markBitmap: Bitmap? = null // mark
 
     // 拖动参数
@@ -181,9 +187,7 @@ class MarkPointView : View {
      * 生成Bitmap
      */
     fun toBitmap(): Bitmap? {
-        if (!isMarkEnabled) {
-            return bitmap
-        }
+        if (!isMarkEnabled) return bitmap
         val b = bitmap ?: return null
         val mb = markBitmap ?: return null
         val bitmap = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
@@ -200,37 +204,56 @@ class MarkPointView : View {
     /**
      * 设置背景图片
      */
-    fun setBitmap(bitmap: Bitmap) {
-        srcBitmap = bitmap
-        val w = bitmap.width
-        val h = bitmap.height
-        val matrix = getResizeScaleMatrix(w, h)
-        this.bitmap = Bitmap.createBitmap(bitmap, 0, 0, w, h, matrix, false)
+    fun setBitmap(src: Bitmap?, bin: Bitmap?, orientation: Int) {
+        src ?: return
+        this.degree = orientation.toFloat()
+        this.originalSrcBitmap = src
+        this.bitmap = resizeBitmap(src, degree)
+        bin?.let {
+            this.originalBinBitmap = it
+            this.bitmap = resizeBitmap(it, degree)
+            isShowingBin = true
+        }
         initBitmapConfig()
+        markManager.rotate(degree) // 当前View不涉及Mark旋转，不加这行也无所谓，但CorrectView必须要加；
         invalidate()
     }
 
     /**
-     * 获取缩放后的矩阵
+     * 获取缩放、旋转后的Bitmap
      */
-    private fun getResizeScaleMatrix(w: Int, h: Int): Matrix {
+    private fun resizeBitmap(bitmap: Bitmap, degree: Float = 0f): Bitmap {
+        val w = bitmap.width
+        val h = bitmap.height
         val size = resizeImage(w, h)
+        L.vv("resize from $w/$h to $size")
         val scale = min(size.width / w.toFloat(), size.height / h.toFloat())
-        return scaleMatrix(scale, scale)
+        val matrix = scaleMatrix(scale, scale).apply { if (degree != 0f) postRotate(degree) }
+        return Bitmap.createBitmap(bitmap, 0, 0, w, h, matrix, false)
     }
 
     /**
      * 向左旋转
      */
     fun rotate(clockwise: Boolean = true) {
-        val b = srcBitmap ?: return
+        val b = originalBitmap ?: return
         val deg = if (clockwise) 90f else -90f
         degree = (degree + deg) % 360
-        val m = getResizeScaleMatrix(b.height, b.width).apply { postRotate(degree) }
-        if (this.bitmap != b) this.bitmap?.recycle()
-        this.bitmap = Bitmap.createBitmap(b, 0, 0, b.width, b.height, m, false)
+        if (bitmap != b) this.bitmap?.recycle()
+        this.bitmap = resizeBitmap(b, degree)
         initBitmapConfig()
         markManager.rotate(degree) // 必须放initBitmapConfig后面
+        invalidate()
+    }
+
+    /**
+     * 切换Bitmap
+     */
+    fun switchBitmap() {
+        originalBinBitmap ?: return
+        isShowingBin = !isShowingBin
+        val b = originalBitmap ?: return
+        this.bitmap = resizeBitmap(b, degree)
         invalidate()
     }
 
@@ -254,6 +277,9 @@ class MarkPointView : View {
      */
     fun getMarkCount() = markManager.getMarkCount()
 
+    /**
+     * 获取标记坐标
+     */
     fun getMarkPointLocation() = markManager.getMarkLocation()
 
 }

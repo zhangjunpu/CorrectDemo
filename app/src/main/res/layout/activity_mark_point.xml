@@ -39,10 +39,23 @@
                 style="@style/CorrectMarkToolsButton"
                 android:background="@drawable/ripple_rotate_right" />
 
+            <CheckBox
+                android:id="@+id/checkMarkDis"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/selector_mark"
+                android:gravity="center"/>
+
+            <View
+                android:id="@+id/btnSwitch"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="1dp"
+                android:background="@drawable/selector_switch" />
+
             <View
                 android:id="@+id/btnClear"
                 style="@style/CorrectMarkToolsButton"
-                android:layout_marginStart="15dp"
+                android:layout_marginStart="1dp"
                 android:background="@drawable/ripple_clear" />
 
             <View
@@ -51,14 +64,6 @@
                 android:layout_marginStart="15dp"
                 android:background="@drawable/ripple_save" />
 
-            <CheckBox
-                android:id="@+id/checkMarkDis"
-                style="@style/CorrectMarkToolsButton"
-                android:layout_marginStart="15dp"
-                android:checked="false"
-                android:background="@drawable/selector_mark_dis"
-                android:gravity="center"
-                android:padding="0dp" />
         </LinearLayout>
     </HorizontalScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

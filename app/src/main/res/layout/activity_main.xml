@@ -8,19 +8,10 @@
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:background="@color/black"
+        android:contentDescription="@string/image"
         app:layout_constraintDimensionRatio="3:4"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/btnDefault"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="50dp"
-        android:text="@string/default_image"
-        app:layout_constraintBottom_toTopOf="@id/btnPhotoAlbum"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/imageView"
-        app:layout_constraintVertical_chainStyle="spread" />
 
     <Button
         android:id="@+id/btnPhotoAlbum"
@@ -28,25 +19,31 @@
         android:layout_height="wrap_content"
         android:text="@string/photo_album"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="@id/btnDefault"
-        app:layout_constraintTop_toBottomOf="@id/btnDefault" />
+        app:layout_constraintEnd_toStartOf="@+id/btnCorrect"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imageView" />
 
     <Button
         android:id="@+id/btnCorrect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="50dp"
         android:text="@string/to_correct"
-        app:layout_constraintBottom_toTopOf="@id/btnMark"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/imageView" />
+        app:layout_constraintBottom_toBottomOf="@+id/btnPhotoAlbum"
+        app:layout_constraintEnd_toStartOf="@+id/btnMark"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btnPhotoAlbum"
+        app:layout_constraintTop_toTopOf="@+id/btnPhotoAlbum" />
 
     <Button
         android:id="@+id/btnMark"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/to_mark"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@id/btnCorrect"
-        app:layout_constraintTop_toBottomOf="@id/btnCorrect" />
+        app:layout_constraintBottom_toBottomOf="@+id/btnCorrect"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/btnCorrect"
+        app:layout_constraintTop_toTopOf="@+id/btnCorrect" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

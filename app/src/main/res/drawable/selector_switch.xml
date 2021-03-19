@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@mipmap/ic_switch_disabled" android:state_enabled="false" />
+    <item>
+        <ripple android:color="@color/white">
+            <item android:drawable="@mipmap/ic_switch" />
+        </ripple>
+    </item>
+</selector>

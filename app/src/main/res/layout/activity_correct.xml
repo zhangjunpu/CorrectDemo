@@ -116,10 +116,23 @@
                 style="@style/CorrectMarkToolsButton"
                 android:background="@drawable/ripple_redo" />
 
+            <CheckBox
+                android:id="@+id/checkMarkDis"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="15dp"
+                android:background="@drawable/selector_mark"
+                android:gravity="center"/>
+
+            <View
+                android:id="@+id/btnSwitch"
+                style="@style/CorrectMarkToolsButton"
+                android:layout_marginStart="1dp"
+                android:background="@drawable/selector_switch" />
+
             <View
                 android:id="@+id/btnClear"
                 style="@style/CorrectMarkToolsButton"
-                android:layout_marginStart="15dp"
+                android:layout_marginStart="1dp"
                 android:background="@drawable/ripple_clear" />
 
             <View

@@ -37,8 +37,15 @@ class MarkPointActivity : AppCompatActivity() {
             checkMarkDis.setOnCheckedChangeListener { _, isChecked ->
                 markView.isMarkEnabled = !isChecked
             }
+            btnSwitch.setOnClickListener {
+                markView.switchBitmap()
+            }
         }
 
-        Cache.bitmap?.let { binding.markView.setBitmap(it) }
+        val srcBitmap = Cache.srcBitmap
+        val binBitmap = Cache.binBitmap
+        val orientation = Cache.orientation
+        binding.markView.setBitmap(srcBitmap, binBitmap, orientation)
+        binding.btnSwitch.isEnabled = binBitmap != null
     }
 }

@@ -9,10 +9,8 @@ import com.junpu.oral.correct.R
 import com.junpu.oral.correct.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityCorrectBinding
 import com.junpu.oral.correct.utils.doOnSeekBarChange
-import com.junpu.utils.gone
 import com.junpu.utils.launch
 import com.junpu.utils.setVisibility
-import com.junpu.utils.visible
 
 class CorrectActivity : PermissionsActivity() {
 
@@ -80,10 +78,19 @@ class CorrectActivity : PermissionsActivity() {
                     launch(ImagePreviewActivity::class.java)
                 }
             }
-
-            Cache.bitmap?.let { correctView.setBitmap(it) }
+            checkMarkDis.setOnCheckedChangeListener { _, isChecked ->
+                correctView.isMarkEnabled = !isChecked
+            }
+            btnSwitch.setOnClickListener {
+                correctView.switchBitmap()
+            }
         }
 
+        val srcBitmap = Cache.srcBitmap
+        val binBitmap = Cache.binBitmap
+        val orientation = Cache.orientation
+        binding.correctView.setBitmap(srcBitmap, binBitmap, orientation)
+        binding.btnSwitch.isEnabled = binBitmap != null
     }
 
 }

@@ -1,16 +1,19 @@
 package com.junpu.oral.correct.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.provider.MediaStore
 import com.junpu.gopermissions.PermissionsActivity
+import com.junpu.log.L
 import com.junpu.log.logStackTrace
 import com.junpu.oral.correct.Cache
 import com.junpu.oral.correct.R
 import com.junpu.oral.correct.databinding.ActivityMainBinding
+import com.junpu.oral.correct.utils.contentString
 import com.junpu.toast.toast
 import com.junpu.utils.launch
 import java.io.FileNotFoundException
@@ -23,7 +26,10 @@ import java.io.FileNotFoundException
 class MainActivity : PermissionsActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var bitmap: Bitmap? = null
+    private var srcBitmap: Bitmap? = null
+    private var binBitmap: Bitmap? = null
+    private var orientation = 0
+    private val option = BitmapFactory.Options().apply { inScaled = false }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,24 +37,27 @@ class MainActivity : PermissionsActivity() {
         setContentView(binding.root)
 
         binding.run {
-            btnDefault.setOnClickListener {
-                bitmap = BitmapFactory.decodeResource(resources, R.raw.math_v)
-                imageView.setImageBitmap(bitmap)
-            }
             btnPhotoAlbum.setOnClickListener {
                 openPhotoAlbum()
             }
             btnCorrect.setOnClickListener {
-                gotoCorrect()
+                gotoNext(CorrectActivity::class.java)
             }
             btnMark.setOnClickListener {
-                gotoMark()
+                gotoNext(MarkPointActivity::class.java)
             }
-
         }
 
         checkPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            if (!it) toast("你倒是给权限啊！！")
+            if (!it) toast("你倒是给权限啊！！") else {
+                try {
+                    val srcBitmap = BitmapFactory.decodeResource(resources, R.raw.img, option)
+                    val binBitmap = BitmapFactory.decodeResource(resources, R.raw.img_bin, option)
+                    updateImage(srcBitmap, binBitmap, 90)
+                } catch (e: Exception) {
+                    e.logStackTrace()
+                }
+            }
         }
     }
 
@@ -58,8 +67,8 @@ class MainActivity : PermissionsActivity() {
             REQUEST_GOTO_MARK_PHOTO -> if (resultCode == RESULT_OK) finish()
             REQUEST_PHOTO_ALBUM -> data?.data?.let {
                 try {
-                    bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(it))
-                    binding.imageView.setImageBitmap(bitmap)
+                    val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(it))
+                    updateImage(bitmap)
                 } catch (e: FileNotFoundException) {
                     e.logStackTrace()
                 }
@@ -67,22 +76,23 @@ class MainActivity : PermissionsActivity() {
         }
     }
 
-    private fun gotoCorrect() {
-        if (bitmap == null) {
-            toast("请先选择图片")
-            return
-        }
-        Cache.bitmap = bitmap
-        launch(CorrectActivity::class.java)
+    private fun updateImage(src: Bitmap?, bin: Bitmap? = null, orientation: Int = 0) {
+        this.srcBitmap = src
+        this.binBitmap = bin
+        this.orientation = orientation
+        val b = binBitmap ?: srcBitmap ?: return
+        binding.imageView.setImageBitmap(b)
     }
 
-    private fun gotoMark() {
-        if (bitmap == null) {
+    private fun gotoNext(cls: Class<out Activity>) {
+        if (srcBitmap == null) {
             toast("请先选择图片")
             return
         }
-        Cache.bitmap = bitmap
-        launch(MarkPointActivity::class.java)
+        Cache.srcBitmap = srcBitmap
+        Cache.binBitmap = binBitmap
+        Cache.orientation = orientation
+        launch(cls)
     }
 
     /**
