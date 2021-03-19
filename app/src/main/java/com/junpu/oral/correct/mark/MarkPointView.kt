@@ -179,27 +179,49 @@ class MarkPointView : View {
             postTranslate(translateX, translateY)
         }
         markBitmap?.recycle()
-        markBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        markBitmap = emptyBitmap(w, h)
         markManager.initBitmap(markBitmap!!)
     }
 
     /**
      * 生成Bitmap
      */
-    fun toBitmap(): Bitmap? {
-        if (!isMarkEnabled) return bitmap
-        val b = bitmap ?: return null
-        val mb = markBitmap ?: return null
-        val bitmap = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
+    fun toBitmap(): Array<Bitmap?> {
+        val b = bitmap ?: return emptyArray()
+        val w = b.width
+        val h = b.height
+
+        val src: Bitmap
+        var bin: Bitmap? = null
+        if (originalBinBitmap == null) {
+            src = b
+        } else {
+            src = if (isShowingBin) resizeBitmap(originalSrcBitmap!!, degree) else b
+            bin = if (isShowingBin) b else resizeBitmap(originalBinBitmap!!, degree)
+        }
+
+        if (!isMarkEnabled || markBitmap == null) return arrayOf(src, bin)
+
+        val resultSrc = emptyBitmap(w, h)
+        val resultBin = if (originalBinBitmap != null) emptyBitmap(w, h) else null
+
         markManager.save {
-            bitmap.applyCanvas {
-                val rect = Rect(0, 0, b.width, b.height)
-                drawBitmap(b, null, rect, null)
-                drawBitmap(mb, null, rect, null)
+            val rect = Rect(0, 0, w, h)
+            resultSrc.applyCanvas {
+                drawBitmap(src, null, rect, null)
+                drawBitmap(markBitmap!!, null, rect, null)
+            }
+            bin?.let {
+                resultBin?.applyCanvas {
+                    drawBitmap(bin, null, rect, null)
+                    drawBitmap(markBitmap!!, null, rect, null)
+                }
             }
         }
-        return bitmap
+        return arrayOf(resultSrc, resultBin)
     }
+
+    private fun emptyBitmap(w: Int, h: Int) = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
 
     /**
      * 设置背景图片

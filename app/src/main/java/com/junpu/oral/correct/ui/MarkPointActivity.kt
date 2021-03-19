@@ -2,8 +2,10 @@ package com.junpu.oral.correct.ui
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.junpu.log.L
 import com.junpu.oral.correct.Cache
 import com.junpu.oral.correct.databinding.ActivityMarkPointBinding
+import com.junpu.oral.correct.utils.contentString
 import com.junpu.utils.launch
 
 /**
@@ -29,8 +31,9 @@ class MarkPointActivity : AppCompatActivity() {
             }
             btnClear.setOnClickListener { markView.clear() }
             btnSave.setOnClickListener {
-                markView.toBitmap()?.let {
-                    Cache.previewBitmap = it
+                markView.toBitmap().let {
+                    it.forEach { b -> L.vv(b?.contentString()) }
+                    Cache.bitmaps = it
                     launch(ImagePreviewActivity::class.java)
                 }
             }

@@ -102,7 +102,7 @@ class MarkCorrectManager(private var context: Context) {
     /**
      * 画mark
      */
-    fun draw() {
+    fun draw(isDrawSelected: Boolean = true) {
         canvas.drawColor(0, PorterDuff.Mode.CLEAR)
         markList.forEachIndexed { index, it ->
             when (it.type) {
@@ -111,7 +111,7 @@ class MarkCorrectManager(private var context: Context) {
                 MARK_TYPE_DRAWING -> pathMark.draw(canvas, it)
             }
             // 当前选中的mark，画选中框
-            if (index == curIndex) {
+            if (isDrawSelected && index == curIndex) {
                 selectedMark.draw(canvas, it)
             }
         }
@@ -406,15 +406,8 @@ class MarkCorrectManager(private var context: Context) {
      * 保存图片时消除选中框
      */
     fun save(block: () -> Unit) {
-        if (curIndex == -1) {
-            block()
-            return
-        }
-        val oldIndex = curIndex
-        curIndex = -1
-        draw()
+        draw(false)
         block()
-        curIndex = oldIndex
         draw()
     }
 

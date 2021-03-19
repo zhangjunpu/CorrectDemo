@@ -74,7 +74,7 @@ class CorrectActivity : PermissionsActivity() {
             btnSave.setOnClickListener {
                 correctView.toBitmap()?.let {
                     L.vv("save bitmap: ${it.width}/${it.height}")
-                    Cache.previewBitmap = it
+                    Cache.bitmaps = arrayOf(it)
                     launch(ImagePreviewActivity::class.java)
                 }
             }

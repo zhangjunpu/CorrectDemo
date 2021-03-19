@@ -80,7 +80,7 @@ class MarkPointManager(private val context: Context) {
     /**
      * 画mark
      */
-    fun draw(isDrawSymbol: Boolean = false) {
+    fun draw(isDrawSelected: Boolean = true, isDrawSymbol: Boolean = false) {
         canvas.drawColor(0, PorterDuff.Mode.CLEAR)
         if (isDrawSymbol && markList.isNullOrEmpty()) {
             symbolMark.draw(canvas)
@@ -89,7 +89,7 @@ class MarkPointManager(private val context: Context) {
         markList.forEachIndexed { index, it ->
             pointMark.draw(canvas, it)
             // 当前选中的mark，画选中框
-            if (index == curIndex) selectedMark.draw(canvas, it)
+            if (isDrawSelected && index == curIndex) selectedMark.draw(canvas, it)
         }
     }
 
@@ -194,11 +194,8 @@ class MarkPointManager(private val context: Context) {
      * 保存图片时消除选中框
      */
     fun save(block: () -> Unit) {
-        val oldIndex = curIndex
-        curIndex = -1
-        draw(true)
+        draw(isDrawSelected = false, isDrawSymbol = true)
         block()
-        curIndex = oldIndex
         draw()
     }
 

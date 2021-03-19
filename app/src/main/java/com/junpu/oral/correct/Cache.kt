@@ -13,5 +13,5 @@ object Cache {
     var orientation: Int = 0 // 图片方向
 
     // 预览Bitmap
-    var previewBitmap: Bitmap? = null
+    var bitmaps: Array<Bitmap?>? = null
 }
