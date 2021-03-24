@@ -7,7 +7,7 @@
     android:background="@color/black"
     tools:context=".ui.CorrectActivity">
 
-    <com.junpu.oral.correct.correct.CorrectView
+    <com.junpu.oral.correct.core.correct.CorrectView
         android:id="@+id/correctView"
         android:layout_width="match_parent"
         android:layout_height="0dp"

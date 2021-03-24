@@ -1,16 +1,17 @@
-package com.junpu.oral.correct.mark
+package com.junpu.oral.correct.core.mark
 
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.scaleMatrix
 import com.junpu.log.L
-import com.junpu.oral.correct.correct.MarkCorrectManager
+import com.junpu.oral.correct.core.TouchArea
 import com.junpu.oral.correct.utils.resizeImage
-import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.min
 
 /**
@@ -35,7 +36,7 @@ class MarkPointView : View {
     private var lastMoveY = 0f
     private var lastMarkMoveX = 0f
     private var lastMarkMoveY = 0f
-    private var moveValue = 10 // 触发移动最小距离
+    private var touchSlop = ViewConfiguration.get(context).scaledTouchSlop // 触发移动最小距离
     private var continuousDrag = false // 触发持续拖动，第一次移动moveValue距离后触发持续拖动，直到手指离开屏幕
 
     private val curMatrix = Matrix() // 图片矩阵
@@ -106,42 +107,33 @@ class MarkPointView : View {
                 // 触摸区域判定
                 when (markManager.checkTouchArea(mx, my)) {
                     // 触摸到了删除按钮
-                    MarkCorrectManager.TouchArea.DELETE -> {
+                    TouchArea.DELETE -> {
                         isDelMark = true
                         markManager.removeMark()
                     }
                     // 触摸到了某个标记
-                    MarkCorrectManager.TouchArea.MARK -> {
+                    TouchArea.MARK -> {
                         markManager.lockMark()
                     }
                     // 触摸到了空白区域
-                    MarkCorrectManager.TouchArea.NONE -> {
+                    TouchArea.NONE -> {
                         markManager.generatePoint(mx, my)
                         markManager.lockMark()
                     }
                 }
-                lastMoveX = x
-                lastMoveY = y
-                lastMarkMoveX = mx
-                lastMarkMoveY = my
                 invalidate()
             }
             MotionEvent.ACTION_MOVE -> {
+                if (isDelMark) return false
                 val tx = x - lastMoveX
                 val ty = y - lastMoveY
                 val mtx = mx - lastMarkMoveX
                 val mty = my - lastMarkMoveY
-
-                if (isDelMark) return false
-                if (continuousDrag || (abs(tx) > moveValue || abs(ty) > moveValue)) {
+                if (continuousDrag || (tx.absoluteValue > touchSlop || ty.absoluteValue > touchSlop)) {
                     markManager.translateMark(mtx, mty)
                     continuousDrag = true
                 }
                 invalidate()
-                lastMoveX = x
-                lastMoveY = y
-                lastMarkMoveX = mx
-                lastMarkMoveY = my
             }
             MotionEvent.ACTION_UP -> {
                 continuousDrag = false
@@ -149,6 +141,10 @@ class MarkPointView : View {
                 markManager.unlockMark()
             }
         }
+        lastMoveX = x
+        lastMoveY = y
+        lastMarkMoveX = mx
+        lastMarkMoveY = my
         return true
     }
 
@@ -186,7 +182,7 @@ class MarkPointView : View {
     /**
      * 生成Bitmap
      */
-    fun toBitmap(): Array<Bitmap?> {
+    fun toBitmaps(): Array<Bitmap?> {
         val b = bitmap ?: return emptyArray()
         val w = b.width
         val h = b.height
@@ -200,25 +196,26 @@ class MarkPointView : View {
             bin = if (isShowingBin) b else resizeBitmap(originalBinBitmap!!, degree)
         }
 
-        if (!isMarkEnabled || markBitmap == null) return arrayOf(src, bin)
+        // 画标记
+        if (isMarkEnabled) {
+            val resultSrc = emptyBitmap(w, h)
+            val resultBin = if (originalBinBitmap != null) emptyBitmap(w, h) else null
 
-        val resultSrc = emptyBitmap(w, h)
-        val resultBin = if (originalBinBitmap != null) emptyBitmap(w, h) else null
-
-        markManager.save {
             val rect = Rect(0, 0, w, h)
             resultSrc.applyCanvas {
                 drawBitmap(src, null, rect, null)
-                drawBitmap(markBitmap!!, null, rect, null)
+                markManager.drawMark(this)
             }
             bin?.let {
                 resultBin?.applyCanvas {
                     drawBitmap(bin, null, rect, null)
-                    drawBitmap(markBitmap!!, null, rect, null)
+                    markManager.drawMark(this)
                 }
             }
+            return arrayOf(resultSrc, resultBin)
         }
-        return arrayOf(resultSrc, resultBin)
+
+        return arrayOf(src, bin)
     }
 
     private fun emptyBitmap(w: Int, h: Int) = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -239,6 +236,18 @@ class MarkPointView : View {
         initBitmapConfig()
         markManager.rotate(degree) // 当前View不涉及Mark旋转，不加这行也无所谓，但CorrectView必须要加；
         invalidate()
+    }
+
+    /**
+     * 单独设置二值化图片
+     */
+    fun setBinBitmap(bin: Bitmap?) {
+        bin ?: return
+        this.originalBinBitmap = bin
+        if (isShowingBin) {
+            this.bitmap = resizeBitmap(bin, degree)
+            invalidate()
+        }
     }
 
     /**
@@ -285,6 +294,21 @@ class MarkPointView : View {
     fun clear() {
         markManager.clear()
         invalidate()
+    }
+
+    /**
+     * 释放
+     */
+    fun release() {
+        markManager.release()
+        originalSrcBitmap?.recycle()
+        originalBinBitmap?.recycle()
+        bitmap?.recycle()
+        markBitmap?.recycle()
+        originalSrcBitmap = null
+        originalBinBitmap = null
+        bitmap = null
+        markBitmap = null
     }
 
     /**

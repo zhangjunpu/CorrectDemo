@@ -1,6 +1,6 @@
-package com.junpu.oral.correct.module
+package com.junpu.oral.correct.core.module
 
-import com.junpu.oral.correct.correct.MarkCorrectManager
+import com.junpu.oral.correct.core.correct.MarkCorrectManager
 
 /**
  * 操作记录

@@ -6,7 +6,7 @@ import com.junpu.gopermissions.PermissionsActivity
 import com.junpu.log.L
 import com.junpu.oral.correct.Cache
 import com.junpu.oral.correct.R
-import com.junpu.oral.correct.correct.CorrectView
+import com.junpu.oral.correct.core.correct.CorrectView
 import com.junpu.oral.correct.databinding.ActivityCorrectBinding
 import com.junpu.oral.correct.utils.doOnSeekBarChange
 import com.junpu.utils.launch

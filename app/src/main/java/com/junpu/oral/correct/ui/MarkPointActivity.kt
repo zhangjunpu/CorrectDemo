@@ -31,7 +31,7 @@ class MarkPointActivity : AppCompatActivity() {
             }
             btnClear.setOnClickListener { markView.clear() }
             btnSave.setOnClickListener {
-                markView.toBitmap().let {
+                markView.toBitmaps().let {
                     it.forEach { b -> L.vv(b?.contentString()) }
                     Cache.bitmaps = it
                     launch(ImagePreviewActivity::class.java)

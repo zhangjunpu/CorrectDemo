@@ -6,4 +6,5 @@
     <string name="default_image">默认图片</string>
     <string name="to_correct">去批改</string>
     <string name="to_mark">去标记错题</string>
+    <string name="image_preview_index">%d/%d</string>
 </resources>

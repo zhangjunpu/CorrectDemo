@@ -6,7 +6,9 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.junpu.oral.correct.Cache
+import com.junpu.oral.correct.R
 import com.junpu.oral.correct.databinding.ActivityImagePreviewBinding
 import com.junpu.oral.correct.databinding.ActivityImagePreviewItemBinding
 
@@ -18,21 +20,34 @@ import com.junpu.oral.correct.databinding.ActivityImagePreviewItemBinding
 class ImagePreviewActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityImagePreviewBinding
+    private lateinit var onPageChangeCallback: ViewPager2.OnPageChangeCallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityImagePreviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.run {
-            viewPager.adapter = ImageAdapter(Cache.bitmaps)
+        val list = Cache.bitmaps
+        onPageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                binding.textIndex.text =
+                    getString(R.string.image_preview_index, position + 1, list?.size ?: 0)
+            }
         }
+        binding.run {
+            viewPager.registerOnPageChangeCallback(onPageChangeCallback)
+            viewPager.adapter = ImageAdapter(list)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding.viewPager.unregisterOnPageChangeCallback(onPageChangeCallback)
     }
 
     private class ImageAdapter(
         private var list: Array<Bitmap?>?
     ) : RecyclerView.Adapter<PhotoHolder>() {
-
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoHolder {
             val layoutInflater = LayoutInflater.from(parent.context)
@@ -57,6 +72,10 @@ class ImagePreviewActivity : AppCompatActivity() {
         fun bindData(bitmap: Bitmap?) {
             bitmap?.let { binding.photoView.setImageBitmap(it) }
         }
+    }
+
+    companion object {
+        var bitmaps: Array<Bitmap>? = null
     }
 
 }

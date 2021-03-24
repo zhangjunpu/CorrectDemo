@@ -1,4 +1,4 @@
-package com.junpu.oral.correct.module
+package com.junpu.oral.correct.core.module
 
 import android.graphics.PointF
 

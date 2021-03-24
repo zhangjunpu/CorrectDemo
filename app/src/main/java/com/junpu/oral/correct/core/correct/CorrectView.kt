@@ -1,4 +1,4 @@
-package com.junpu.oral.correct.correct
+package com.junpu.oral.correct.core.correct
 
 import android.content.Context
 import android.graphics.*
@@ -6,12 +6,14 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.scaleMatrix
 import com.junpu.log.L
+import com.junpu.oral.correct.core.TouchArea
 import com.junpu.oral.correct.utils.resizeImage
 import com.junpu.utils.isNotNullOrBlank
-import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
@@ -45,7 +47,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     private var lastMoveY = 0f
     private var lastMarkMoveX = 0f
     private var lastMarkMoveY = 0f
-    private var moveValue = 10 // 触发移动最小距离
+    private var touchSlop = ViewConfiguration.get(context).scaledTouchSlop // 触发移动最小距离
     private var continuousDrag = false // 触发持续拖动，第一次移动moveValue距离后触发持续拖动，直到手指离开屏幕
 
     private var mode = Mode.NONE // 当前模式
@@ -139,21 +141,21 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                     // 触摸区域判定
                     when (markManager.checkTouchArea(mx, my)) {
                         // 触摸到了删除按钮
-                        MarkCorrectManager.TouchArea.DELETE -> {
+                        TouchArea.DELETE -> {
                             isDelMark = true
                             markManager.removeMark()
                         }
                         // 触摸到了拖动按钮
-                        MarkCorrectManager.TouchArea.DRAG -> {
+                        TouchArea.DRAG -> {
                             isDragMark = true
                             markManager.lockMark(false)
                         }
                         // 触摸到了某个标记
-                        MarkCorrectManager.TouchArea.MARK -> {
+                        TouchArea.MARK -> {
                             markManager.lockMark(true)
                         }
                         // 触摸到了空白区域
-                        MarkCorrectManager.TouchArea.NONE -> {
+                        TouchArea.NONE -> {
                             var flag = true
                             when (mode) {
                                 Mode.RIGHT -> markManager.generateRight(mx, my)
@@ -172,10 +174,6 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                         }
                     }
                 }
-                lastMoveX = x
-                lastMoveY = y
-                lastMarkMoveX = mx
-                lastMarkMoveY = my
                 if (mode != Mode.NONE) invalidate()
             }
             MotionEvent.ACTION_MOVE -> {
@@ -186,7 +184,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                 // 拖拽模式
                 if (mode == Mode.NONE) {
                     if (touchMode == TouchMode.DRAG && pointerCount == 1 &&
-                        ((abs(tx) > moveValue || abs(ty) > moveValue) || continuousDrag)
+                        ((tx.absoluteValue > touchSlop || ty.absoluteValue > touchSlop) || continuousDrag)
                     ) {
                         translateX += tx
                         translateY += ty
@@ -199,16 +197,12 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                     if (mode == Mode.PEN && !isDragMark) {
                         markManager.addPathPoint(mx, my, mtx, mty, continuousDrag)
                         continuousDrag = true
-                    } else if ((abs(tx) > moveValue || abs(ty) > moveValue) || continuousDrag) {
+                    } else if ((tx.absoluteValue > touchSlop || ty.absoluteValue > touchSlop) || continuousDrag) {
                         markManager.translateMark(mtx, mty, continuousDrag)
                         continuousDrag = true
                     }
                     invalidate()
                 }
-                lastMoveX = x
-                lastMoveY = y
-                lastMarkMoveX = mx
-                lastMarkMoveY = my
             }
             MotionEvent.ACTION_UP -> {
                 touchMode = TouchMode.NONE
@@ -218,6 +212,10 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                 markManager.unlockMark()
             }
         }
+        lastMoveX = x
+        lastMoveY = y
+        lastMarkMoveX = mx
+        lastMarkMoveY = my
         return detector.onTouchEvent(event)
     }
 

@@ -1,13 +1,14 @@
-package com.junpu.oral.correct.correct
+package com.junpu.oral.correct.core.correct
 
 import android.content.Context
 import android.graphics.*
 import android.text.TextPaint
 import androidx.core.content.ContextCompat
 import com.junpu.oral.correct.R
-import com.junpu.oral.correct.module.MarkCorrect
-import com.junpu.oral.correct.module.MarkRecord
-import com.junpu.oral.correct.module.PathPoint
+import com.junpu.oral.correct.core.TouchArea
+import com.junpu.oral.correct.core.module.MarkCorrect
+import com.junpu.oral.correct.core.module.MarkRecord
+import com.junpu.oral.correct.core.module.PathPoint
 import kotlin.math.max
 import kotlin.math.min
 
@@ -949,18 +950,6 @@ class MarkCorrectManager(private var context: Context) {
             recordList.trimToSize()
             operateIndex = -1
         }
-    }
-
-    /**
-     * 触摸区域
-     * @author junpu
-     * @date 2021/3/11
-     */
-    enum class TouchArea {
-        NONE, // 空白
-        MARK, // 标记
-        DRAG, // 拖动按钮
-        DELETE, // 删除按钮
     }
 
     /**

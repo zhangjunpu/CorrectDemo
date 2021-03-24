@@ -1,11 +1,11 @@
-package com.junpu.oral.correct.mark
+package com.junpu.oral.correct.core.mark
 
 import android.content.Context
 import android.graphics.*
 import androidx.core.content.ContextCompat
 import com.junpu.oral.correct.R
-import com.junpu.oral.correct.correct.MarkCorrectManager.TouchArea
-import com.junpu.oral.correct.module.MarkPoint
+import com.junpu.oral.correct.core.TouchArea
+import com.junpu.oral.correct.core.module.MarkPoint
 
 /**
  * 标记错题Mark
@@ -30,7 +30,6 @@ class MarkPointManager(private val context: Context) {
         get() = if (curIndex in markList.indices) markList[curIndex] else null
 
     // 临时内存地址
-    private var pointF = PointF() // 临时PointF
     private var rectF = RectF() // 临时RectF
     private var arr = FloatArray(4) // 临时数组
     private var lockedPoint: PointF? = null // 处理中的mark指针
@@ -80,16 +79,23 @@ class MarkPointManager(private val context: Context) {
     /**
      * 画mark
      */
-    fun draw(isDrawSelected: Boolean = true, isDrawSymbol: Boolean = false) {
+    fun draw() {
         canvas.drawColor(0, PorterDuff.Mode.CLEAR)
-        if (isDrawSymbol && markList.isNullOrEmpty()) {
-            symbolMark.draw(canvas)
-            return
-        }
         markList.forEachIndexed { index, it ->
             pointMark.draw(canvas, it)
             // 当前选中的mark，画选中框
-            if (isDrawSelected && index == curIndex) selectedMark.draw(canvas, it)
+            if (index == curIndex) selectedMark.draw(canvas, it)
+        }
+    }
+
+    /**
+     * 在指定的canvas上画标记、或勾
+     */
+    fun drawMark(canvas: Canvas) {
+        if (markList.isNullOrEmpty()) {
+            symbolMark.draw(canvas)
+        } else {
+            markList.forEach { pointMark.draw(canvas, it) }
         }
     }
 
@@ -191,15 +197,6 @@ class MarkPointManager(private val context: Context) {
     }
 
     /**
-     * 保存图片时消除选中框
-     */
-    fun save(block: () -> Unit) {
-        draw(isDrawSelected = false, isDrawSymbol = true)
-        block()
-        draw()
-    }
-
-    /**
      * 旋转数据
      */
     private fun rotationMarkList(rotation: Int) {
@@ -255,7 +252,7 @@ class MarkPointManager(private val context: Context) {
     /**
      * 获取标记列表
      */
-    fun getMarkLocation(): MarkPoint = MarkPoint(width, height, markList)
+    fun getMarkLocation() = MarkPoint(width, height, markList)
 
 
     /**
