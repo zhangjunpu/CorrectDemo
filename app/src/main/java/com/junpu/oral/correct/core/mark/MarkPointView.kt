@@ -116,10 +116,7 @@ class MarkPointView : View {
                         markManager.lockMark()
                     }
                     // 触摸到了空白区域
-                    TouchArea.NONE -> {
-                        markManager.generatePoint(mx, my)
-                        markManager.lockMark()
-                    }
+                    TouchArea.NONE -> markManager.run { if (generatePoint(mx, my)) lockMark() }
                 }
                 invalidate()
             }

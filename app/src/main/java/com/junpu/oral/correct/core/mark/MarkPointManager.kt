@@ -49,11 +49,12 @@ class MarkPointManager(private val context: Context) {
     /**
      * 生成新标记 - path
      */
-    fun generatePoint(x: Float, y: Float) {
-        if (!checkOutOfBounds(x, y)) return
+    fun generatePoint(x: Float, y: Float): Boolean {
+        if (!checkOutOfBounds(x, y)) return false
         markList.add(PointF(x, y))
         curIndex = markList.lastIndex
         onPointCountChangedCallback?.invoke(markList.size)
+        return true
     }
 
     /**
