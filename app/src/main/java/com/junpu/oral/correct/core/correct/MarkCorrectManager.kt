@@ -64,33 +64,37 @@ class MarkCorrectManager(private var context: Context) {
     /**
      * 生成新标记 - 勾
      */
-    fun generateRight(x: Float, y: Float) {
-        if (!checkOutOfBounds(x, y)) return
+    fun generateRight(x: Float, y: Float): Boolean {
+        if (!checkOutOfBounds(x, y)) return false
         addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_RIGHT))
+        return true
     }
 
     /**
      * 生成新标记 - 叉
      */
-    fun generateWrong(x: Float, y: Float) {
-        if (!checkOutOfBounds(x, y)) return
+    fun generateWrong(x: Float, y: Float): Boolean {
+        if (!checkOutOfBounds(x, y)) return false
         addMark(symbolMark.newMark(x, y, SYMBOL_TYPE_WRONG))
+        return true
     }
 
     /**
      * 生成新标记 - 文字
      */
-    fun generateText(x: Float, y: Float, text: String) {
-        if (!checkOutOfBounds(x, y)) return
+    fun generateText(x: Float, y: Float, text: String?): Boolean {
+        if (!checkOutOfBounds(x, y) || text.isNullOrBlank()) return false
         addMark(textMark.newMark(x, y, text))
+        return true
     }
 
     /**
      * 生成新标记 - path
      */
-    fun generatePath(x: Float, y: Float) {
-        if (!checkOutOfBounds(x, y)) return
+    fun generatePath(x: Float, y: Float): Boolean {
+        if (!checkOutOfBounds(x, y)) return false
         addMark(pathMark.newMark(x, y))
+        return true
     }
 
     private fun addMark(mark: MarkCorrect?) {

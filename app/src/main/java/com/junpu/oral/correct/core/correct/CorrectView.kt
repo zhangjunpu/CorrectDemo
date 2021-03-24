@@ -12,7 +12,6 @@ import androidx.core.graphics.scaleMatrix
 import com.junpu.log.L
 import com.junpu.oral.correct.core.TouchArea
 import com.junpu.oral.correct.utils.resizeImage
-import com.junpu.utils.isNotNullOrBlank
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
@@ -151,24 +150,15 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
                             markManager.lockMark(false)
                         }
                         // 触摸到了某个标记
-                        TouchArea.MARK -> {
-                            markManager.lockMark(true)
-                        }
+                        TouchArea.MARK -> markManager.lockMark(true)
                         // 触摸到了空白区域
                         TouchArea.NONE -> {
-                            var flag = true
-                            when (mode) {
+                            val flag = when (mode) {
                                 Mode.RIGHT -> markManager.generateRight(mx, my)
                                 Mode.WRONG -> markManager.generateWrong(mx, my)
-                                Mode.TEXT -> {
-                                    val text = getText()
-                                    if (text.isNotNullOrBlank())
-                                        markManager.generateText(mx, my, text)
-                                    else
-                                        flag = false
-                                }
+                                Mode.TEXT -> markManager.generateText(mx, my, getText())
                                 Mode.PEN -> markManager.generatePath(mx, my)
-                                else -> Unit
+                                else -> false
                             }
                             if (flag) markManager.lockMark(false)
                         }
