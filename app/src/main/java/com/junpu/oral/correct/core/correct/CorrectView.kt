@@ -37,7 +37,6 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
     private var markBitmap: Bitmap? = null // mark
 
     // 缩放参数
-    private var scaleBaseValue = 0f // 每次缩放的基数
     private var scalePointX = 0f // 每次缩放中心点
     private var scalePointY = 0f // 每次缩放中心点
 
@@ -132,7 +131,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         val mx = pointF.x
         val my = pointF.y
         val pointerCount = event.pointerCount
-        when (event.action) {
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 if (mode == Mode.NONE) {
                     touchMode = TouchMode.DRAG
@@ -213,7 +212,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         detector ?: return false
         if (mode == Mode.NONE && touchMode == TouchMode.ZOOM) {
             val oldScale = scale
-            scale = scaleBaseValue * detector.scaleFactor
+            scale *= detector.scaleFactor
             if (scale == oldScale) return false
             val scaleFactor = scale / oldScale
             curMatrix.postScale(scaleFactor, scaleFactor, scalePointX, scalePointY)
@@ -222,7 +221,7 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
             translateY = matrixValues[Matrix.MTRANS_Y]
             invalidate()
         }
-        return false
+        return true
     }
 
     override fun onScaleBegin(detector: ScaleGestureDetector?): Boolean {
@@ -230,7 +229,6 @@ class CorrectView : View, ScaleGestureDetector.OnScaleGestureListener {
         if (mode == Mode.NONE) {
             touchMode = TouchMode.ZOOM
         }
-        scaleBaseValue = scale
         scalePointX = detector.focusX
         scalePointY = detector.focusY
         return true

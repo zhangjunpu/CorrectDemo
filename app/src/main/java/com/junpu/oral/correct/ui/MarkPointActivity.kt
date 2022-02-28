@@ -34,7 +34,7 @@ class MarkPointActivity : AppCompatActivity() {
                 markView.toBitmaps().let {
                     it.forEach { b -> L.vv(b?.contentString()) }
                     Cache.bitmaps = it
-                    launch(ImagePreviewActivity::class.java)
+                    launch<ImagePreviewActivity>()
                 }
             }
             checkMarkDis.setOnCheckedChangeListener { _, isChecked ->

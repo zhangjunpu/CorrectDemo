@@ -75,7 +75,7 @@ class CorrectActivity : PermissionsActivity() {
                 correctView.toBitmap()?.let {
                     L.vv("save bitmap: ${it.width}/${it.height}")
                     Cache.bitmaps = arrayOf(it)
-                    launch(ImagePreviewActivity::class.java)
+                    launch<ImagePreviewActivity>()
                 }
             }
             checkMarkDis.setOnCheckedChangeListener { _, isChecked ->

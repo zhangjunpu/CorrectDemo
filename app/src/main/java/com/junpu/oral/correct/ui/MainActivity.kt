@@ -8,12 +8,10 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.provider.MediaStore
 import com.junpu.gopermissions.PermissionsActivity
-import com.junpu.log.L
 import com.junpu.log.logStackTrace
 import com.junpu.oral.correct.Cache
 import com.junpu.oral.correct.R
 import com.junpu.oral.correct.databinding.ActivityMainBinding
-import com.junpu.oral.correct.utils.contentString
 import com.junpu.toast.toast
 import com.junpu.utils.launch
 import java.io.FileNotFoundException
@@ -41,10 +39,10 @@ class MainActivity : PermissionsActivity() {
                 openPhotoAlbum()
             }
             btnCorrect.setOnClickListener {
-                gotoNext(CorrectActivity::class.java)
+                gotoNext<CorrectActivity>()
             }
             btnMark.setOnClickListener {
-                gotoNext(MarkPointActivity::class.java)
+                gotoNext<MarkPointActivity>()
             }
         }
 
@@ -84,7 +82,7 @@ class MainActivity : PermissionsActivity() {
         binding.imageView.setImageBitmap(b)
     }
 
-    private fun gotoNext(cls: Class<out Activity>) {
+    private inline fun <reified T : Activity> gotoNext() {
         if (srcBitmap == null) {
             toast("请先选择图片")
             return
@@ -92,7 +90,7 @@ class MainActivity : PermissionsActivity() {
         Cache.srcBitmap = srcBitmap
         Cache.binBitmap = binBitmap
         Cache.orientation = orientation
-        launch(cls)
+        launch<T>()
     }
 
     /**
